@@ -1,4 +1,4 @@
-export const DB_NAME = "edusocial";
+export const DB_NAME = "mocked_backend_db";
 
 // Account Status
 export const ACCOUNT_STATUS = {

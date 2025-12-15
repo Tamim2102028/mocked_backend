@@ -21,6 +21,8 @@ const postSchema = new Schema(
         size: { type: Number },
       },
     ],
+
+    // ✅ UPDATED TYPE ENUM
     type: {
       type: String,
       enum: Object.values(POST_TYPES),
@@ -29,7 +31,7 @@ const postSchema = new Schema(
       index: true,
     },
 
-    // Context
+    // Context / Target
     postOnId: {
       type: Schema.Types.ObjectId,
       required: true,
@@ -65,7 +67,7 @@ const postSchema = new Schema(
     ],
     tags: [{ type: String, trim: true }],
 
-    // ✅ Stats (Updated: Removed viewsCount)
+    // Stats
     likesCount: { type: Number, default: 0 },
     commentsCount: { type: Number, default: 0 },
     sharesCount: { type: Number, default: 0 },

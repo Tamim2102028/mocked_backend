@@ -18,8 +18,11 @@ app.use(cookieParser());
 
 // Import and use routes
 import userRouter from "./routes/user.routes.js";
+import postRouter from "./routes/post.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 app.use("/api/v1/users", userRouter);
+// Post related routes (stubbed backend)
+app.use("/api/v1/posts", postRouter);
 
 // ⚠️ সবার শেষে এটা বসাতে হবে
 app.use(errorHandler);

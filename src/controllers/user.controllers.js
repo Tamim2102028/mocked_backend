@@ -446,7 +446,7 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   // This avoids a separate call to checkFriendshipStatus
   const isSelf = req.user?._id.toString() === user._id.toString();
 
-  const userProfile = {
+  const userProfileHeader = {
     ...user.toObject(),
     friendship: {
       isFriend: false, // Default: Not friends
@@ -467,7 +467,11 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, userProfile, "User profile fetched successfully")
+      new ApiResponse(
+        200,
+        userProfileHeader,
+        "User profile fetched successfully"
+      )
     );
 });
 

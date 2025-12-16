@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadFile } from "../utils/fileUpload.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { USER_TYPES } from "../constants/index.js";
+import { USER_TYPES, PROFILE_RELATION_STATUS } from "../constants/index.js";
 import { findInstitutionByEmailDomain } from "../services/academic.service.js";
 
 // --- Utility: Token Generator ---
@@ -424,7 +424,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 // ==========================================
-// 🚀 11. GET USER PROFILE (By Username)
+// 🚀 11. GET USER PROFILE HEADER (By Username)
 // ==========================================
 const getUserProfileHeader = asyncHandler(async (req, res) => {
   const { username } = req.params;
@@ -434,9 +434,10 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   }
 
   // 1. Find User by Username (Real DB)
-  const user = await User.findOne({ userName: username }).select(
-    "-password -refreshToken"
-  );
+  const user = await User.findOne({ userName: username })
+    .select("-password -refreshToken")
+    .populate("institution", "name logo")
+    .populate("academicInfo.department", "name code");
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -448,11 +449,7 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
 
   const userProfileHeader = {
     ...user.toObject(),
-    friendship: {
-      isFriend: false, // Default: Not friends
-      status: null, // null, "PENDING", "ACCEPTED", "SENT"
-      isSelf: isSelf,
-    },
+    profile_relation_status: PROFILE_RELATION_STATUS.NOT_FRIENDS, // Hardcoded for now
     // Stats
     stats: {
       postsCount: 15,

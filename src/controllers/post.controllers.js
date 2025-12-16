@@ -419,6 +419,8 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       createdAt: new Date("2024-12-15T10:00:00Z"),
       likesCount: 25,
       commentsCount: 5,
+      sharesCount: 3,
+      tags: ["coding", "javascript", "webdev"],
       isOwnPost: true,
     },
     {
@@ -434,6 +436,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       createdAt: new Date("2024-12-14T15:30:00Z"),
       likesCount: 18,
       commentsCount: 3,
+      sharesCount: 1,
       isOwnPost: true,
     },
     {
@@ -449,6 +452,8 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       createdAt: new Date("2024-12-13T09:15:00Z"),
       likesCount: 12,
       commentsCount: 2,
+      sharesCount: 0,
+      tags: ["thoughts", "life"],
       isOwnPost: true,
     },
   ];
@@ -467,6 +472,8 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       createdAt: new Date("2024-12-15T11:00:00Z"),
       likesCount: 42,
       commentsCount: 8,
+      sharesCount: 5,
+      tags: ["public", "announcement"],
       isOwnPost: false,
     },
     {
@@ -482,6 +489,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       createdAt: new Date("2024-12-14T16:45:00Z"),
       likesCount: 35,
       commentsCount: 6,
+      sharesCount: 2,
       isOwnPost: false,
     },
     {
@@ -497,6 +505,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       createdAt: new Date("2024-12-13T10:20:00Z"),
       likesCount: 28,
       commentsCount: 4,
+      sharesCount: 1,
       isOwnPost: false,
     },
   ];

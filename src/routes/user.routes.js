@@ -10,8 +10,7 @@ import {
   updateAcademicProfile, // একাডেমিক তথ্য (Auto Chat Trigger) আপডেট
   updateUserAvatar,
   updateUserCoverImage, // (যদি কন্ট্রোলার বানিয়ে থাকেন, না বানালে কমেন্ট করে রাখবেন)
-  getUserProfile,
-} from "../controllers/user.controllers.js";
+  getUserProfile,  getUserProfilePosts,} from "../controllers/user.controllers.js";
 
 // Middlewares
 import { uploadImage } from "../middlewares/multer.middleware.js";

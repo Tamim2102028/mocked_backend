@@ -379,6 +379,141 @@ const getUserPosts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, data, "User posts fetched successfully"));
 });
 
+// ==============================================================================
+// 🚀 7. GET USER PROFILE POSTS (By Username)
+// ==============================================================================
+const getUserProfilePosts = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username) {
+    throw new ApiError(400, "Username is required");
+  }
+
+  // Import User model (add at top if not already imported)
+  const { User } = await import("../models/user.model.js");
+
+  // 1. Find User by Username
+  const user = await User.findOne({ userName: username }).select(
+    "_id fullName userName avatar"
+  );
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // 2. Check if viewing own profile
+  const isSelf = req.user?._id.toString() === user._id.toString();
+
+  // 3. Hard-coded Posts based on profile type
+  const ownProfilePosts = [
+    {
+      _id: "post_own_1",
+      content: "My first post - Only visible on my profile",
+      author: {
+        _id: user._id,
+        fullName: user.fullName,
+        userName: user.userName,
+        avatar: user.avatar,
+      },
+      privacy: "PUBLIC",
+      createdAt: new Date("2024-12-15T10:00:00Z"),
+      likesCount: 25,
+      commentsCount: 5,
+      isOwnPost: true,
+    },
+    {
+      _id: "post_own_2",
+      content: "This is my second post - Private content",
+      author: {
+        _id: user._id,
+        fullName: user.fullName,
+        userName: user.userName,
+        avatar: user.avatar,
+      },
+      privacy: "FRIENDS_ONLY",
+      createdAt: new Date("2024-12-14T15:30:00Z"),
+      likesCount: 18,
+      commentsCount: 3,
+      isOwnPost: true,
+    },
+    {
+      _id: "post_own_3",
+      content: "My third post - Personal thoughts",
+      author: {
+        _id: user._id,
+        fullName: user.fullName,
+        userName: user.userName,
+        avatar: user.avatar,
+      },
+      privacy: "PRIVATE",
+      createdAt: new Date("2024-12-13T09:15:00Z"),
+      likesCount: 12,
+      commentsCount: 2,
+      isOwnPost: true,
+    },
+  ];
+
+  const otherProfilePosts = [
+    {
+      _id: "post_other_1",
+      content: "Public post from another user's profile",
+      author: {
+        _id: user._id,
+        fullName: user.fullName,
+        userName: user.userName,
+        avatar: user.avatar,
+      },
+      privacy: "PUBLIC",
+      createdAt: new Date("2024-12-15T11:00:00Z"),
+      likesCount: 42,
+      commentsCount: 8,
+      isOwnPost: false,
+    },
+    {
+      _id: "post_other_2",
+      content: "Another public post - Anyone can see this",
+      author: {
+        _id: user._id,
+        fullName: user.fullName,
+        userName: user.userName,
+        avatar: user.avatar,
+      },
+      privacy: "PUBLIC",
+      createdAt: new Date("2024-12-14T16:45:00Z"),
+      likesCount: 35,
+      commentsCount: 6,
+      isOwnPost: false,
+    },
+    {
+      _id: "post_other_3",
+      content: "Third public post visible to everyone",
+      author: {
+        _id: user._id,
+        fullName: user.fullName,
+        userName: user.userName,
+        avatar: user.avatar,
+      },
+      privacy: "PUBLIC",
+      createdAt: new Date("2024-12-13T10:20:00Z"),
+      likesCount: 28,
+      commentsCount: 4,
+      isOwnPost: false,
+    },
+  ];
+
+  const posts = isSelf ? ownProfilePosts : otherProfilePosts;
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { posts, isOwnProfile: isSelf },
+        "User profile posts fetched successfully"
+      )
+    );
+});
+
 export {
   createPost,
   getFeed,
@@ -386,4 +521,5 @@ export {
   likePost,
   addComment,
   toggleMarkAsRead,
+  getUserProfilePosts,
 };

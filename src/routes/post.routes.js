@@ -6,7 +6,8 @@ import {
   getUserPosts,
   likePost,
   addComment,
-  toggleMarkAsRead, // ✅ Import this
+  toggleMarkAsRead,
+  getUserProfilePosts,
 } from "../controllers/post.controllers.js";
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.post("/:postId/comments", addComment);
 
 // ✅ View/Read Toggle Route
 router.post("/:postId/toggle-read", toggleMarkAsRead);
+
+// Profile Posts
+router.get("/profile/:username", getUserProfilePosts);
 
 export default router;

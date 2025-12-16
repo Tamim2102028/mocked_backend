@@ -10,7 +10,7 @@ import {
   updateAcademicProfile, // একাডেমিক তথ্য (Auto Chat Trigger) আপডেট
   updateUserAvatar,
   updateUserCoverImage, // (যদি কন্ট্রোলার বানিয়ে থাকেন, না বানালে কমেন্ট করে রাখবেন)
-  getUserProfile,
+  getUserProfileHeader,
 } from "../controllers/user.controllers.js";
 
 // Middlewares
@@ -88,6 +88,6 @@ router.patch(
 );
 
 // --- Public Profile View ---
-router.get("/p/:username", verifyJWT, getUserProfile);
+router.get("/p/:username", verifyJWT, getUserProfileHeader);
 
 export default router;

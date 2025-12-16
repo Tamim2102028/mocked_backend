@@ -426,7 +426,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 // ==========================================
 // 🚀 11. GET USER PROFILE (By Username)
 // ==========================================
-const getUserProfile = asyncHandler(async (req, res) => {
+const getUserProfileHeader = asyncHandler(async (req, res) => {
   const { username } = req.params;
 
   if (!username) {
@@ -482,5 +482,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   updateAccountDetails,
-  getUserProfile,
+  getUserProfileHeader,
 };

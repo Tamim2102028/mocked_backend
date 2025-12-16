@@ -254,4 +254,136 @@ const toggleMarkAsRead = asyncHandler(async (req, res) => {
     );
 });
 
-export { createPost, getFeed, likePost, addComment, toggleMarkAsRead };
+// ==============================================================================
+// 🚀 6. GET USER POSTS (Profile Feed)
+// ==============================================================================
+const getUserPosts = asyncHandler(async (req, res) => {
+  await _simulateLatency();
+  const { username } = req.params;
+  const isOwnProfile = req.user.userName === username;
+
+  // 📝 Future Logic:
+  // 1. Find user by username
+  // 2. Query Post model where author._id === user._id
+  // 3. Filter by privacy settings (public/friends/only_me)
+  // 4. Populate author details
+  // 5. Paginate results
+
+  // Mock Author (If own profile, use req.user; else mock it)
+  const authorDetails = isOwnProfile
+    ? {
+        _id: req.user._id,
+        fullName: req.user.fullName,
+        userName: req.user.userName,
+        avatar: req.user.avatar,
+        userType: req.user.userType,
+      }
+    : {
+        _id: _objectId("mock_user_id"),
+        fullName: username.charAt(0).toUpperCase() + username.slice(1), // Mock Name
+        userName: username,
+        avatar: "https://via.placeholder.com/150",
+        userType: "student",
+      };
+
+  let posts = [
+    {
+      _id: "p_user_001",
+      content: "Exploring the new campus library! 📚✨",
+      attachments: [
+        {
+          type: "image",
+          url: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1000",
+        },
+      ],
+      type: POST_TYPES.GENERAL,
+      postOnModel: POST_TARGET_MODELS.USER,
+      postOnId: authorDetails._id,
+      visibility: "PUBLIC", // Everyone can see
+
+      author: authorDetails,
+
+      stats: { likes: 45, comments: 12, shares: 2 },
+      context: {
+        isLiked: true,
+        isSaved: false,
+        isMine: isOwnProfile,
+        isRead: true,
+        isFollowing: true,
+      },
+      createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+    {
+      _id: "p_user_002",
+      content:
+        "Just finished my final project presentation! 🎓💻 #CSE #Graduation",
+      attachments: [],
+      type: POST_TYPES.GENERAL,
+      postOnModel: POST_TARGET_MODELS.USER,
+      postOnId: authorDetails._id,
+      visibility: "FRIENDS", // Only friends can see (Assuming we are friends)
+
+      author: authorDetails,
+
+      stats: { likes: 120, comments: 34, shares: 10 },
+      context: {
+        isLiked: false,
+        isSaved: true,
+        isMine: isOwnProfile,
+        isRead: true,
+        isFollowing: true,
+      },
+      createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+      updatedAt: new Date(Date.now() - 172800000).toISOString(),
+    },
+    {
+      _id: "p_user_003_private",
+      content: "This is a private note for myself. 🔒",
+      attachments: [],
+      type: POST_TYPES.GENERAL,
+      postOnModel: POST_TARGET_MODELS.USER,
+      postOnId: authorDetails._id,
+      visibility: "ONLY_ME", // Only author can see
+
+      author: authorDetails,
+
+      stats: { likes: 0, comments: 0, shares: 0 },
+      context: {
+        isLiked: false,
+        isSaved: false,
+        isMine: isOwnProfile,
+        isRead: true,
+        isFollowing: true,
+      },
+      createdAt: new Date(Date.now() - 200000).toISOString(),
+      updatedAt: new Date(Date.now() - 200000).toISOString(),
+    },
+  ];
+
+  // 🛡️ Filter posts based on privacy
+  if (!isOwnProfile) {
+    // If viewing someone else's profile, HIDE "ONLY_ME" posts
+    posts = posts.filter((post) => post.visibility !== "ONLY_ME");
+  }
+
+  const data = {
+    posts,
+    hasNextPage: false,
+    nextPage: null,
+    totalDocs: posts.length,
+  };
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, data, "User posts fetched successfully"));
+});
+
+export {
+  createPost,
+  getFeed,
+  getUserPosts,
+  likePost,
+  addComment,
+  toggleMarkAsRead,
+};

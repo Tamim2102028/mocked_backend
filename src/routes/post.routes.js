@@ -3,6 +3,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   createPost,
   getFeed,
+  getUserPosts,
   likePost,
   addComment,
   toggleMarkAsRead, // ✅ Import this
@@ -15,6 +16,7 @@ router.use(verifyJWT);
 // Create & Feed
 router.post("/", createPost);
 router.get("/feed", getFeed);
+router.get("/u/:username", getUserPosts); // ✅ User specific posts
 
 // Actions
 router.post("/:postId/like", likePost);

@@ -453,11 +453,12 @@ const getUserProfile = asyncHandler(async (req, res) => {
       status: null, // null, "PENDING", "ACCEPTED", "SENT"
       isSelf: isSelf,
     },
-    // Mock counts if not in schema yet
+    // Stats
     stats: {
       postsCount: 15,
       friendsCount: 120,
       followersCount: 250,
+      followingCount: 180,
     },
     isOwnProfile: isSelf,
   };

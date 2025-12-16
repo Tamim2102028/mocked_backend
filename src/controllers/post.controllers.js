@@ -184,7 +184,12 @@ const getFeed = asyncHandler(async (req, res) => {
     },
   ];
 
-  const data = { posts };
+  const data = {
+    posts,
+    hasNextPage: true, // Mock pagination
+    nextPage: 2,
+    totalDocs: 100,
+  };
   return res
     .status(200)
     .json(new ApiResponse(200, data, "Feed fetched successfully"));

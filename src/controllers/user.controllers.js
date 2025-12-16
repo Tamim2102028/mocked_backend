@@ -423,6 +423,51 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated successfully"));
 });
 
+// ==========================================
+// 🚀 11. GET USER PROFILE (By Username)
+// ==========================================
+const getUserProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username) {
+    throw new ApiError(400, "Username is required");
+  }
+
+  // 1. Find User by Username (Real DB)
+  const user = await User.findOne({ userName: username }).select(
+    "-password -refreshToken"
+  );
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // 2. Add Stubbed Friendship Status (Mock Data)
+  // This avoids a separate call to checkFriendshipStatus
+  const isSelf = req.user?._id.toString() === user._id.toString();
+
+  const userProfile = {
+    ...user.toObject(),
+    friendship: {
+      isFriend: false, // Default: Not friends
+      status: null, // null, "PENDING", "ACCEPTED", "SENT"
+      isSelf: isSelf,
+    },
+    // Mock counts if not in schema yet
+    stats: {
+      postsCount: 15,
+      friendsCount: 120,
+      followersCount: 250,
+    },
+  };
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, userProfile, "User profile fetched successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -434,4 +479,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   updateAccountDetails,
+  getUserProfile,
 };

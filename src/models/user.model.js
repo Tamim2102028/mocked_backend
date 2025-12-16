@@ -9,6 +9,8 @@ import {
   GENDERS,
   RELIGIONS,
   ACCOUNT_STATUS,
+  FRIEND_REQUEST_POLICY,
+  CONNECTION_VISIBILITY,
 } from "../constants/index.js";
 
 const userSchema = new Schema(
@@ -38,7 +40,6 @@ const userSchema = new Schema(
       unique: true,
       sparse: true, // ✅ এটাই ম্যাজিক, ফোন নম্বর না থাকলে ইউনিক এরর দেবে না
       index: true,
-      default: "",
     },
 
     // --- Profile ---
@@ -106,6 +107,17 @@ const userSchema = new Schema(
       type: String,
       enum: Object.values(ACCOUNT_STATUS),
       default: ACCOUNT_STATUS.ACTIVE,
+    },
+    privacySettings: {
+      friendRequestPolicy: {
+        type: String,
+        enum: Object.values(FRIEND_REQUEST_POLICY),
+        default: FRIEND_REQUEST_POLICY.EVERYONE,
+      },
+      connectionVisibility: {
+        type: String,
+        default: CONNECTION_VISIBILITY.ONLY_ME, // সব সময় ONLY_ME থাকবে, কেউ অন্যের ফ্রেন্ডলিস্ট দেখবে না
+      },
     },
     isStudentEmail: {
       type: Boolean,

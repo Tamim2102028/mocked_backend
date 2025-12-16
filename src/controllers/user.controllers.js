@@ -459,6 +459,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       friendsCount: 120,
       followersCount: 250,
       followingCount: 180,
+      publicFilesCount: 7,
     },
     isOwnProfile: isSelf,
   };

@@ -203,6 +203,9 @@ const toggleLikePost = asyncHandler(async (req, res) => {
   await _simulateLatency();
   const { postId } = req.params;
   // Mock Toggle Response
+  // 1. Find post by ID
+  // 2. Toggle isLiked status
+  // 3. Update likesCount
 
   return res
     .status(200)
@@ -419,7 +422,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       privacy: "PUBLIC",
       createdAt: new Date("2024-12-15T10:00:00Z"),
       likesCount: 25,
-      commentsCount: 5,
+      commentsCount: 9,
       sharesCount: 3,
       tags: ["coding", "javascript", "webdev"],
       isOwnPost: true,

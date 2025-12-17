@@ -4,7 +4,7 @@ import {
   createPost,
   getFeed,
   getUserPosts,
-  likePost,
+  toggleLikePost,
   addComment,
   toggleMarkAsRead,
   getUserProfilePosts,
@@ -20,7 +20,7 @@ router.get("/feed", getFeed);
 router.get("/u/:username", getUserPosts); // ✅ User specific posts
 
 // Actions
-router.post("/:postId/like", likePost);
+router.post("/:postId/toggle-like", toggleLikePost);
 router.post("/:postId/comments", addComment);
 
 // ✅ View/Read Toggle Route

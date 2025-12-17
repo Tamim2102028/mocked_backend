@@ -199,17 +199,18 @@ const getFeed = asyncHandler(async (req, res) => {
 // 🚀 3. OTHER ACTIONS (Like, Comment, Read)
 // ==============================================================================
 
-const likePost = asyncHandler(async (req, res) => {
+const toggleLikePost = asyncHandler(async (req, res) => {
   await _simulateLatency();
   const { postId } = req.params;
   // Mock Toggle Response
+
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
         { postId, isLiked: true, likesCount: 25 },
-        "Post liked"
+        "Post liked/unliked successfully"
       )
     );
 });
@@ -422,6 +423,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       sharesCount: 3,
       tags: ["coding", "javascript", "webdev"],
       isOwnPost: true,
+      isLiked: true,
     },
     {
       _id: "post_own_2",
@@ -438,6 +440,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       commentsCount: 3,
       sharesCount: 1,
       isOwnPost: true,
+      isLiked: false,
     },
     {
       _id: "post_own_3",
@@ -455,6 +458,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       sharesCount: 0,
       tags: ["thoughts", "life"],
       isOwnPost: true,
+      isLiked: false,
     },
   ];
 
@@ -475,6 +479,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       sharesCount: 5,
       tags: ["public", "announcement"],
       isOwnPost: false,
+      isLiked: true,
     },
     {
       _id: "post_other_2",
@@ -491,6 +496,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       commentsCount: 6,
       sharesCount: 2,
       isOwnPost: false,
+      isLiked: false,
     },
     {
       _id: "post_other_3",
@@ -507,6 +513,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       commentsCount: 4,
       sharesCount: 1,
       isOwnPost: false,
+      isLiked: false,
     },
   ];
 
@@ -527,7 +534,7 @@ export {
   createPost,
   getFeed,
   getUserPosts,
-  likePost,
+  toggleLikePost,
   addComment,
   toggleMarkAsRead,
   getUserProfilePosts,

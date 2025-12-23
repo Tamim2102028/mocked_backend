@@ -4,8 +4,14 @@ import { User } from "../models/user.model.js";
 import { uploadFile } from "../utils/fileUpload.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { USER_TYPES, PROFILE_RELATION_STATUS } from "../constants/index.js";
+import {
+  USER_TYPES,
+  PROFILE_RELATION_STATUS,
+  POST_TARGET_MODELS,
+  POST_VISIBILITY,
+} from "../constants/index.js";
 import { findInstitutionByEmailDomain } from "../services/academic.service.js";
+import { Post } from "../models/post.model.js";
 
 // --- Utility: Token Generator ---
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -447,12 +453,36 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   // This avoids a separate call to checkFriendshipStatus
   const isSelf = req.user?._id.toString() === user._id.toString();
 
+  // 3. Calculate Posts Count (Dynamic)
+  let visibilityQuery = {
+    postOnId: user._id,
+    postOnModel: POST_TARGET_MODELS.USER,
+    isDeleted: false,
+    isArchived: false,
+  };
+
+  if (isSelf) {
+    // Own Profile: See everything
+  } else {
+    // Visitor: Check Relationship (Mocked)
+    const isFriend = false;
+    if (isFriend) {
+      visibilityQuery.visibility = {
+        $in: [POST_VISIBILITY.PUBLIC, POST_VISIBILITY.CONNECTIONS],
+      };
+    } else {
+      visibilityQuery.visibility = POST_VISIBILITY.PUBLIC;
+    }
+  }
+
+  const postsCount = await Post.countDocuments(visibilityQuery);
+
   const userProfileHeader = {
     ...user.toObject(),
     profile_relation_status: PROFILE_RELATION_STATUS.NOT_FRIENDS, // Hardcoded for now
     // Stats
     stats: {
-      postsCount: 15,
+      postsCount: postsCount,
       friendsCount: 120,
       followersCount: 250,
       followingCount: 180,

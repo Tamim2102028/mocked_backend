@@ -7,6 +7,7 @@ import {
   toggleMarkAsRead,
   getUserProfilePosts,
   getFeedPosts,
+  deletePost,
 } from "../controllers/post.controllers.js";
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.get("/feed", getFeedPosts);
 // Actions
 router.post("/:postId/toggle-like", toggleLikePost);
 router.post("/:postId/comments", addComment);
+router.delete("/:postId", deletePost);
 
 // ✅ View/Read Toggle Route
 router.post("/:postId/toggle-read", toggleMarkAsRead);

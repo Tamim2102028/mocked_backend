@@ -267,6 +267,35 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, data, "User posts fetched successfully"));
 });
 
+// =========================
+// 🚀 7. DELETE POST (Soft Delete)
+// =========================
+const deletePost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // Check Authorization
+  if (post.author.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not authorized to delete this post");
+  }
+
+  // Soft Delete (Better for data integrity)
+  post.isDeleted = true;
+  await post.save();
+
+  // OR Hard Delete (If you want to remove it completely)
+  // await Post.findByIdAndDelete(postId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { postId }, "Post deleted successfully"));
+});
+
 export {
   createPost,
   getFeedPosts,
@@ -274,4 +303,5 @@ export {
   addComment,
   toggleMarkAsRead,
   getUserProfilePosts,
+  deletePost,
 };

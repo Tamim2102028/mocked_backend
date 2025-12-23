@@ -3,12 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import mongoose from "mongoose";
 
-const _simulateLatency = () => new Promise((r) => setTimeout(r, 800));
 const _objectId = () => new mongoose.Types.ObjectId().toString();
 
 // 🚀 1. GET COMMENTS BY POST ID
 const getPostComments = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { postId } = req.params;
 
   // Mock Comments List
@@ -52,7 +50,6 @@ const getPostComments = asyncHandler(async (req, res) => {
 
 // 🚀 2. ADD COMMENT
 const addComment = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { postId } = req.params;
   const { content } = req.body;
 
@@ -84,7 +81,6 @@ const addComment = asyncHandler(async (req, res) => {
 
 // 🚀 3. DELETE COMMENT
 const deleteComment = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { commentId } = req.params;
 
   // Mock Success
@@ -95,7 +91,6 @@ const deleteComment = asyncHandler(async (req, res) => {
 
 // 🚀 4. UPDATE COMMENT
 const updateComment = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { commentId } = req.params;
   const { content } = req.body;
 

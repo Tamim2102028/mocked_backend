@@ -1,206 +1,75 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
+import {
+  POST_TARGET_MODELS,
+  POST_TYPES,
+  ATTACHMENT_TYPES,
+  POST_VISIBILITY,
+} from "../constants/index.js";
 import mongoose from "mongoose";
+import { User } from "../models/user.model.js";
 
-// ⏳ Helper: Simulate Network Delay
-const _simulateLatency = () =>
-  new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 500));
-
-// 🆔 Helper: Generate ObjectId
-const _objectId = () => new mongoose.Types.ObjectId().toString();
-
-// ==============================================================================
-// 🚀 1. CREATE POST (Unified Handler)
-// ==============================================================================
+// =========================
+// 🚀 1. CREATE POST
+// =========================
 const createPost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
-
+  // those field should be came from req.body
   const {
     content,
-    type = POST_TYPES.GENERAL,
-    targetModel = POST_TARGET_MODELS.USER,
-    targetId = req.user._id,
-    pollOptions = [],
-    attachments = [],
+    attachments,
+    type,
+    postOnModel,
+    postOnId,
+    visibility,
+    pollOptions,
+    tags,
   } = req.body;
 
-  // Validation
-  if (
-    !content?.trim() &&
-    attachments.length === 0 &&
-    type !== POST_TYPES.POLL
-  ) {
-    throw new ApiError(400, "Content or attachment is required");
+  // Must Check (content, type, postOnModel, postOnId)
+  if (!content || !type || !postOnModel || !postOnId) {
+    throw new ApiError(400, "All fields are required");
   }
 
-  const now = new Date().toISOString();
+  /*
+ const post = await PostModel.create({
+    content: content,
+    attachments: attachments || [],
+    type: type,
+    postOnId: postOnId,
+    postOnModel: postOnModel,
+    author: req.user._id,
+    visibility: visibility || POST_VISIBILITY.PUBLIC,
+    pollOptions: pollOptions || [],
+    tags: tags || [],
+    
+    likesCount: 0,
+    commentsCount: 0,
+    sharesCount: 0,
+    isArchived: false,
+    isPinned: false,
+    isDeleted: false,
+  })
 
-  // Construct Mock Response
-  const post = {
-    _id: _objectId(),
-    content: content || "",
-    attachments: attachments,
-    type: type, // GENERAL, NOTICE, ASSIGNMENT, etc.
-
-    // 📍 Location Info
-    postOnModel: targetModel,
-    postOnId: targetId,
-
-    // 👤 Real Author Info
-    author: {
-      _id: req.user._id,
-      fullName: req.user.fullName,
-      userName: req.user.userName,
-      avatar: req.user.avatar,
-      userType: req.user.userType,
-    },
-
-    // 📊 Poll Options (If any)
-    pollOptions: type === POST_TYPES.POLL ? pollOptions : [],
-
-    // 📈 Stats
-    stats: { likes: 0, comments: 0, shares: 0 },
-
-    // ⚙️ User Context
-    context: {
-      isLiked: false,
-      isSaved: false,
-      isMine: true,
-      isRead: true,
-      isFollowing: false,
-    },
-
-    createdAt: now,
-    updatedAt: now,
-  };
+  */
 
   return res
     .status(201)
     .json(new ApiResponse(201, { post }, "Post created successfully"));
 });
 
-// ==============================================================================
-// 🚀 2. GET FEED (Mixed Types & Locations)
-// ==============================================================================
-const getFeed = asyncHandler(async (req, res) => {
-  await _simulateLatency();
-
-  // Mock Data: ৩টি ভিন্ন টাইপ এবং লোকেশনের উদাহরণ
-  const posts = [
-    // 🔔 1. DEPARTMENT NOTICE (Official)
-    {
-      _id: "p_dept_101",
-      content:
-        "আগামীকাল থেকে মিড-টার্ম পরীক্ষার ফর্ম ফিলাপ শুরু হবে। সবাইকে অফিসে যোগাযোগ করার জন্য বলা হলো।",
-
-      type: POST_TYPES.NOTICE, // ✅ NOTICE Type
-      postOnModel: POST_TARGET_MODELS.DEPARTMENT, // 📍 Dept Page
-      postOnId: "dept_cse_id",
-      attachments: [],
-
-      author: {
-        _id: "u_head_1",
-        fullName: "CSE Head",
-        userName: "cse_official",
-        avatar:
-          "https://ui-avatars.com/api/?name=Dept+Head&background=0D8ABC&color=fff",
-        userType: "TEACHER",
-      },
-      stats: { likes: 120, comments: 10, shares: 50 },
-      context: { isLiked: false, isSaved: false, isRead: false, isMine: false },
-      createdAt: new Date().toISOString(),
-    },
-
-    // 📝 2. CR CORNER (Assignment / Notice)
-    {
-      _id: "p_cr_202",
-      content: "Chemistry Lab Report Submit করার শেষ সময় ২ দিন বাড়ানো হয়েছে।",
-
-      type: POST_TYPES.NOTICE, // ✅ NOTICE (CR দিচ্ছে)
-      postOnModel: POST_TARGET_MODELS.CR_CORNER, // 📍 CR Corner
-      postOnId: "cr_section_a",
-      attachments: [],
-
-      author: {
-        _id: "u_cr_1",
-        fullName: "Fahim (CR)",
-        userName: "fahim_cr",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=fahim",
-        userType: "STUDENT",
-      },
-      stats: { likes: 45, comments: 20, shares: 2 },
-      context: { isLiked: true, isSaved: true, isRead: true, isMine: false },
-      createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-    },
-
-    // ❓ 3. STUDENT QUESTION (General Group)
-    {
-      _id: "p_group_303",
-      content: "Mid-term এর সিলেবাসে কি Chapter 5 আছে? কেউ জানলে একটু বলবেন।",
-
-      type: POST_TYPES.QUESTION, // ❓ QUESTION Type
-      postOnModel: POST_TARGET_MODELS.GROUP,
-      postOnId: "group_study_1",
-      attachments: [],
-
-      author: {
-        _id: "u_student_5",
-        fullName: "Sumaya Akter",
-        userName: "sumaya_s",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sumaya",
-        userType: "STUDENT",
-      },
-      stats: { likes: 2, comments: 8, shares: 0 },
-      context: { isLiked: false, isSaved: false, isRead: true, isMine: false },
-      createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-    },
-
-    // 📊 4. POLL
-    {
-      _id: "p_poll_404",
-      content: "আমাদের ব্যাচ ট্যুর কোথায় হওয়া উচিত?",
-      type: POST_TYPES.POLL, // 📊 POLL Type
-      postOnModel: POST_TARGET_MODELS.CR_CORNER,
-      postOnId: "cr_section_a",
-      attachments: [],
-
-      author: {
-        _id: "u_cr_1",
-        fullName: "Fahim (CR)",
-        userName: "fahim_cr",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=fahim",
-        userType: "STUDENT",
-      },
-      pollOptions: [
-        { text: "Cox's Bazar", votes: 40 },
-        { text: "Sylhet", votes: 25 },
-        { text: "Sajek", votes: 60 },
-      ],
-      stats: { likes: 10, comments: 50, shares: 0 },
-      context: { isLiked: false, isSaved: false, isRead: true, isMine: false },
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-    },
-  ];
-
-  const data = {
-    posts,
-    hasNextPage: true, // Mock pagination
-    nextPage: 2,
-    totalDocs: 100,
-  };
-  return res
-    .status(200)
-    .json(new ApiResponse(200, data, "Feed fetched successfully"));
+// =========================
+// 🚀 2. GET FEED POSTS
+// =========================
+const getFeedPosts = asyncHandler(async (req, res) => {
+  // feed post er logic pore lekha hobe , age onno jaigar post er logic lekhe ses kori.
 });
 
-// ==============================================================================
-// 🚀 3. OTHER ACTIONS (Like, Comment, Read)
-// ==============================================================================
+// =========================
+// 🚀 3-4-5.(Like, Comment, mark as read)
+// =========================
 
 const toggleLikePost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { postId } = req.params;
   // Mock Toggle Response
   // 1. Find post by ID
@@ -219,12 +88,11 @@ const toggleLikePost = asyncHandler(async (req, res) => {
 });
 
 const addComment = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { postId } = req.params;
   const { content } = req.body;
 
   const comment = {
-    _id: _objectId(),
+    _id: new mongoose.Types.ObjectId().toString(),
     post: postId,
     content,
     author: {
@@ -244,7 +112,6 @@ const addComment = asyncHandler(async (req, res) => {
 });
 
 const toggleMarkAsRead = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { postId } = req.params;
   // Mock Toggle Read
   return res
@@ -258,13 +125,41 @@ const toggleMarkAsRead = asyncHandler(async (req, res) => {
     );
 });
 
-// ==============================================================================
-// 🚀 6. GET USER POSTS (Profile Feed)
-// ==============================================================================
-const getUserPosts = asyncHandler(async (req, res) => {
-  await _simulateLatency();
+// =========================
+// 🚀 6. GET USER PROFILE POSTS (By Username)
+// =========================
+const getUserProfilePosts = asyncHandler(async (req, res) => {
   const { username } = req.params;
   const isOwnProfile = req.user.userName === username;
+
+  // 1. Fetch User Details (from DB or req.user)
+  let authorDetails;
+
+  if (isOwnProfile) {
+    authorDetails = {
+      _id: req.user._id,
+      fullName: req.user.fullName,
+      userName: req.user.userName,
+      avatar: req.user.avatar,
+      userType: req.user.userType,
+    };
+  } else {
+    const user = await User.findOne({ userName: username }).select(
+      "_id fullName userName avatar userType"
+    );
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    authorDetails = {
+      _id: user._id,
+      fullName: user.fullName,
+      userName: user.userName,
+      avatar: user.avatar,
+      userType: user.userType || "student", // Fallback if missing
+    };
+  }
 
   // 📝 Future Logic:
   // 1. Find user by username
@@ -273,102 +168,144 @@ const getUserPosts = asyncHandler(async (req, res) => {
   // 4. Populate author details
   // 5. Paginate results
 
-  // Mock Author (If own profile, use req.user; else mock it)
-  const authorDetails = isOwnProfile
-    ? {
-        _id: req.user._id,
-        fullName: req.user.fullName,
-        userName: req.user.userName,
-        avatar: req.user.avatar,
-        userType: req.user.userType,
-      }
-    : {
-        _id: _objectId("mock_user_id"),
-        fullName: username.charAt(0).toUpperCase() + username.slice(1), // Mock Name
-        userName: username,
-        avatar: "https://via.placeholder.com/150",
-        userType: "student",
-      };
+  let posts = [];
 
-  let posts = [
-    {
-      _id: "p_user_001",
-      content: "Exploring the new campus library! 📚✨",
-      attachments: [
-        {
-          type: "image",
-          url: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80&w=1000",
+  if (isOwnProfile) {
+    posts = [
+      {
+        _id: "my_p_1",
+        content: "Just updated my profile picture! 📸 #NewLook",
+        images: [],
+        videos: [],
+        docs: [],
+        type: POST_TYPES.GENERAL,
+        postOnModel: POST_TARGET_MODELS.USER,
+        postOnId: authorDetails._id,
+        visibility: POST_VISIBILITY.PUBLIC,
+        author: authorDetails,
+        stats: { likes: 10, comments: 2, shares: 0 },
+        context: {
+          isLiked: false,
+          isSaved: false,
+          isMine: true,
+          isRead: true,
         },
-      ],
-      type: POST_TYPES.GENERAL,
-      postOnModel: POST_TARGET_MODELS.USER,
-      postOnId: authorDetails._id,
-      visibility: "PUBLIC", // Everyone can see
-
-      author: authorDetails,
-
-      stats: { likes: 45, comments: 12, shares: 2 },
-      context: {
-        isLiked: true,
-        isSaved: false,
-        isMine: isOwnProfile,
-        isRead: true,
-        isFollowing: true,
+        createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+        updatedAt: new Date(Date.now() - 3600000).toISOString(),
       },
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      _id: "p_user_002",
-      content:
-        "Just finished my final project presentation! 🎓💻 #CSE #Graduation",
-      attachments: [],
-      type: POST_TYPES.GENERAL,
-      postOnModel: POST_TARGET_MODELS.USER,
-      postOnId: authorDetails._id,
-      visibility: "FRIENDS", // Only friends can see (Assuming we are friends)
-
-      author: authorDetails,
-
-      stats: { likes: 120, comments: 34, shares: 10 },
-      context: {
-        isLiked: false,
-        isSaved: true,
-        isMine: isOwnProfile,
-        isRead: true,
-        isFollowing: true,
+      {
+        _id: "my_p_2_private",
+        content: "Personal notes: Need to finish the project by Friday. 📝",
+        images: [],
+        videos: [],
+        docs: [],
+        type: POST_TYPES.GENERAL,
+        postOnModel: POST_TARGET_MODELS.USER,
+        postOnId: authorDetails._id,
+        visibility: POST_VISIBILITY.ONLY_ME, // ✅ Visible only to me
+        author: authorDetails,
+        stats: { likes: 0, comments: 0, shares: 0 },
+        context: {
+          isLiked: false,
+          isSaved: false,
+          isMine: true,
+          isRead: true,
+        },
+        createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        updatedAt: new Date(Date.now() - 86400000).toISOString(),
       },
-      createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-      updatedAt: new Date(Date.now() - 172800000).toISOString(),
-    },
-    {
-      _id: "p_user_003_private",
-      content: "This is a private note for myself. 🔒",
-      attachments: [],
-      type: POST_TYPES.GENERAL,
-      postOnModel: POST_TARGET_MODELS.USER,
-      postOnId: authorDetails._id,
-      visibility: "ONLY_ME", // Only author can see
-
-      author: authorDetails,
-
-      stats: { likes: 0, comments: 0, shares: 0 },
-      context: {
-        isLiked: false,
-        isSaved: false,
-        isMine: isOwnProfile,
-        isRead: true,
-        isFollowing: true,
+      {
+        _id: "my_p_3_img",
+        content: "Throwback to the last vacation! 🌊",
+        images: [
+          "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=1000",
+        ],
+        videos: [],
+        docs: [],
+        type: POST_TYPES.GENERAL,
+        postOnModel: POST_TARGET_MODELS.USER,
+        postOnId: authorDetails._id,
+        visibility: POST_VISIBILITY.CONNECTIONS,
+        author: authorDetails,
+        stats: { likes: 25, comments: 5, shares: 1 },
+        context: {
+          isLiked: true,
+          isSaved: true,
+          isMine: true,
+          isRead: true,
+        },
+        createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        updatedAt: new Date(Date.now() - 172800000).toISOString(),
       },
-      createdAt: new Date(Date.now() - 200000).toISOString(),
-      updatedAt: new Date(Date.now() - 200000).toISOString(),
-    },
-  ];
-
-  // 🛡️ Filter posts based on privacy
-  if (!isOwnProfile) {
-    // If viewing someone else's profile, HIDE "ONLY_ME" posts
-    posts = posts.filter((post) => post.visibility !== "ONLY_ME");
+    ];
+  } else {
+    posts = [
+      {
+        _id: "other_p_1",
+        content: `Hello from ${authorDetails.fullName}! 👋 This is a public post.`,
+        images: [
+          "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&q=80&w=1000",
+        ],
+        videos: [],
+        docs: [],
+        type: POST_TYPES.GENERAL,
+        postOnModel: POST_TARGET_MODELS.USER,
+        postOnId: authorDetails._id,
+        visibility: POST_VISIBILITY.PUBLIC,
+        author: authorDetails,
+        stats: { likes: 125, comments: 45, shares: 12 },
+        context: {
+          isLiked: true,
+          isSaved: true,
+          isMine: false,
+          isRead: true,
+        },
+        createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+        updatedAt: new Date(Date.now() - 7200000).toISOString(),
+      },
+      {
+        _id: "other_p_1",
+        content: `Hello from ${authorDetails.fullName}! 👋 This is a friend only post.`,
+        images: [],
+        videos: [],
+        docs: [],
+        type: POST_TYPES.GENERAL,
+        postOnModel: POST_TARGET_MODELS.USER,
+        postOnId: authorDetails._id,
+        visibility: POST_VISIBILITY.CONNECTIONS, // ✅ Visible if friends (Mocking friendship)
+        author: authorDetails,
+        stats: { likes: 125, comments: 45, shares: 12 },
+        context: {
+          isLiked: true,
+          isSaved: true,
+          isMine: false,
+          isRead: true,
+        },
+        createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+        updatedAt: new Date(Date.now() - 7200000).toISOString(),
+      },
+      {
+        _id: "other_p_2",
+        content: "Enjoying the weekend! ☀️",
+        images: [],
+        videos: [],
+        docs: [],
+        type: POST_TYPES.GENERAL,
+        postOnModel: POST_TARGET_MODELS.USER,
+        postOnId: authorDetails._id,
+        visibility: POST_VISIBILITY.CONNECTIONS, // ✅ Visible if friends (Mocking friendship)
+        author: authorDetails,
+        stats: { likes: 50, comments: 10, shares: 1 },
+        context: {
+          isLiked: false,
+          isSaved: false,
+          isMine: false,
+          isRead: true,
+        },
+        createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        updatedAt: new Date(Date.now() - 172800000).toISOString(),
+      },
+    ];
   }
 
   const data = {
@@ -383,160 +320,9 @@ const getUserPosts = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, data, "User posts fetched successfully"));
 });
 
-// ==============================================================================
-// 🚀 7. GET USER PROFILE POSTS (By Username)
-// ==============================================================================
-const getUserProfilePosts = asyncHandler(async (req, res) => {
-  const { username } = req.params;
-
-  if (!username) {
-    throw new ApiError(400, "Username is required");
-  }
-
-  // Import User model (add at top if not already imported)
-  const { User } = await import("../models/user.model.js");
-
-  // 1. Find User by Username
-  const user = await User.findOne({ userName: username }).select(
-    "_id fullName userName avatar"
-  );
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  // 2. Check if viewing own profile
-  const isSelf = req.user?._id.toString() === user._id.toString();
-
-  // 3. Hard-coded Posts based on profile type
-  const ownProfilePosts = [
-    {
-      _id: "post_own_1",
-      content: "My first post - Only visible on my profile",
-      author: {
-        _id: user._id,
-        fullName: user.fullName,
-        userName: user.userName,
-        avatar: user.avatar,
-      },
-      privacy: "PUBLIC",
-      createdAt: new Date("2024-12-15T10:00:00Z"),
-      likesCount: 25,
-      commentsCount: 9,
-      sharesCount: 3,
-      tags: ["coding", "javascript", "webdev"],
-      isOwnPost: true,
-      isLiked: true,
-    },
-    {
-      _id: "post_own_2",
-      content: "This is my second post - Private content",
-      author: {
-        _id: user._id,
-        fullName: user.fullName,
-        userName: user.userName,
-        avatar: user.avatar,
-      },
-      privacy: "FRIENDS_ONLY",
-      createdAt: new Date("2024-12-14T15:30:00Z"),
-      likesCount: 18,
-      commentsCount: 3,
-      sharesCount: 1,
-      isOwnPost: true,
-      isLiked: false,
-    },
-    {
-      _id: "post_own_3",
-      content: "My third post - Personal thoughts",
-      author: {
-        _id: user._id,
-        fullName: user.fullName,
-        userName: user.userName,
-        avatar: user.avatar,
-      },
-      privacy: "PRIVATE",
-      createdAt: new Date("2024-12-13T09:15:00Z"),
-      likesCount: 12,
-      commentsCount: 2,
-      sharesCount: 0,
-      tags: ["thoughts", "life"],
-      isOwnPost: true,
-      isLiked: false,
-    },
-  ];
-
-  const otherProfilePosts = [
-    {
-      _id: "post_other_1",
-      content: "Public post from another user's profile",
-      author: {
-        _id: user._id,
-        fullName: user.fullName,
-        userName: user.userName,
-        avatar: user.avatar,
-      },
-      privacy: "PUBLIC",
-      createdAt: new Date("2024-12-15T11:00:00Z"),
-      likesCount: 42,
-      commentsCount: 8,
-      sharesCount: 5,
-      tags: ["public", "announcement"],
-      isOwnPost: false,
-      isLiked: true,
-    },
-    {
-      _id: "post_other_2",
-      content: "Another public post - Anyone can see this",
-      author: {
-        _id: user._id,
-        fullName: user.fullName,
-        userName: user.userName,
-        avatar: user.avatar,
-      },
-      privacy: "PUBLIC",
-      createdAt: new Date("2024-12-14T16:45:00Z"),
-      likesCount: 35,
-      commentsCount: 6,
-      sharesCount: 2,
-      isOwnPost: false,
-      isLiked: false,
-    },
-    {
-      _id: "post_other_3",
-      content: "Third public post visible to everyone",
-      author: {
-        _id: user._id,
-        fullName: user.fullName,
-        userName: user.userName,
-        avatar: user.avatar,
-      },
-      privacy: "PUBLIC",
-      createdAt: new Date("2024-12-13T10:20:00Z"),
-      likesCount: 28,
-      commentsCount: 4,
-      sharesCount: 1,
-      isOwnPost: false,
-      isLiked: false,
-    },
-  ];
-
-  const posts = isSelf ? ownProfilePosts : otherProfilePosts;
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { posts, isOwnProfile: isSelf },
-        "User profile posts fetched successfully"
-      )
-    );
-});
-
 export {
   createPost,
-  getFeed,
-  getUserPosts,
+  getFeedPosts,
   toggleLikePost,
   addComment,
   toggleMarkAsRead,

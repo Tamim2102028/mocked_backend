@@ -20,6 +20,12 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
+// ⏳ Global Latency Simulation Middleware
+app.use(async (req, res, next) => {
+  await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
+  next();
+});
+
 // Import and use routes
 import userRouter from "./routes/user.routes.js";
 import postRouter from "./routes/post.routes.js";

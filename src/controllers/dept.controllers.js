@@ -3,11 +3,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import mongoose from "mongoose";
 
-const _simulateLatency = () => new Promise((r) => setTimeout(r, 1000));
 const _objectId = () => new mongoose.Types.ObjectId().toString();
 
 const getDeptFeed = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { deptId } = req.params;
 
   const posts = [
@@ -37,7 +35,6 @@ const getDeptFeed = asyncHandler(async (req, res) => {
 
 // Create Dept Post (Only for Admin/Head)
 const createDeptPost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { deptId } = req.params;
   const { content } = req.body;
 
@@ -65,7 +62,6 @@ const createDeptPost = asyncHandler(async (req, res) => {
 
 // 🚀 3. GET DEPT DETAILS
 const getDeptDetails = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { deptId } = req.params;
 
   const department = {
@@ -88,7 +84,6 @@ const getDeptDetails = asyncHandler(async (req, res) => {
 
 // 🚀 4. GET TEACHERS LIST
 const getTeachers = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { deptId } = req.params;
 
   const teachers = [

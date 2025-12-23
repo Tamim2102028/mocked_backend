@@ -8,49 +8,61 @@ import {
 
 const postSchema = new Schema(
   {
-    content: { type: String, trim: true },
+    content: {
+      type: String,
+      trim: true,
+      required: true,
+    },
+
     attachments: [
       {
+        // (image, video, pdf, doc, link)
         type: {
           type: String,
           enum: Object.values(ATTACHMENT_TYPES),
           required: true,
         },
+        // url from cloudinary
         url: { type: String, required: true },
         name: { type: String },
         size: { type: Number },
       },
     ],
 
-    // ✅ UPDATED TYPE ENUM
+    // (general, event, poll, link, image, video, pdf, doc)
     type: {
       type: String,
       enum: Object.values(POST_TYPES),
-      default: POST_TYPES.GENERAL,
       required: true,
       index: true,
     },
 
-    // Context / Target
+    // Model on which the post is made
+    // (User, Group, Page, Room, Institution, Department, CrCorner)
+    postOnModel: {
+      type: String,
+      required: true,
+      enum: Object.values(POST_TARGET_MODELS),
+      required: true,
+      index: true,
+    },
+    // Id of the Model where the post is made
     postOnId: {
       type: Schema.Types.ObjectId,
       required: true,
       refPath: "postOnModel",
       index: true,
     },
-    postOnModel: {
-      type: String,
-      required: true,
-      enum: Object.values(POST_TARGET_MODELS),
-      default: POST_TARGET_MODELS.GROUP,
-    },
 
+    // Id of the User who made the post
     author: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
       index: true,
     },
+
+    // (public, connections, internal, only_me)
     visibility: {
       type: String,
       enum: Object.values(POST_VISIBILITY),
@@ -72,8 +84,10 @@ const postSchema = new Schema(
     commentsCount: { type: Number, default: 0 },
     sharesCount: { type: Number, default: 0 },
 
+    // Flags
     isArchived: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

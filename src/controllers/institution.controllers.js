@@ -3,12 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import mongoose from "mongoose";
 
-const _simulateLatency = () => new Promise((r) => setTimeout(r, 1000));
 const _objectId = () => new mongoose.Types.ObjectId().toString();
 
 // 🏛️ GET INSTITUTION FEED
 const getInstitutionFeed = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { instId } = req.params;
 
   const posts = [
@@ -54,7 +52,6 @@ const getInstitutionFeed = asyncHandler(async (req, res) => {
 
 // 🏛️ CREATE INSTITUTION POST (Admin Only)
 const createInstitutionPost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { instId } = req.params;
   const { content, type = POST_TYPES.NOTICE } = req.body;
 
@@ -82,7 +79,6 @@ const createInstitutionPost = asyncHandler(async (req, res) => {
 
 // 🚀 3. GET INSTITUTION DETAILS
 const getInstitutionDetails = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { instId } = req.params;
 
   const institution = {
@@ -103,7 +99,6 @@ const getInstitutionDetails = asyncHandler(async (req, res) => {
 
 // 🚀 4. GET DEPARTMENTS LIST
 const getDepartmentsList = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { instId } = req.params;
 
   const departments = [

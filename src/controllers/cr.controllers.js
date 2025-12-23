@@ -3,13 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import mongoose from "mongoose";
 
-const _simulateLatency = () => new Promise((r) => setTimeout(r, 1000));
 const _objectId = () => new mongoose.Types.ObjectId().toString();
 
 // 📢 GET CR FEED
 const getCrFeed = asyncHandler(async (req, res) => {
-  await _simulateLatency();
-
   const posts = [
     {
       _id: "cr_notice_1",
@@ -38,7 +35,6 @@ const getCrFeed = asyncHandler(async (req, res) => {
 
 // 📢 CREATE CR NOTICE
 const createCrPost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { content } = req.body;
 
   const post = {

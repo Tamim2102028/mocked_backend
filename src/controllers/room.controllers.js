@@ -3,12 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import mongoose from "mongoose";
 
-const _simulateLatency = () => new Promise((r) => setTimeout(r, 1000));
 const _objectId = () => new mongoose.Types.ObjectId().toString();
 
 // 🏫 GET ROOM FEED
 const getRoomFeed = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { roomId } = req.params;
 
   const posts = [
@@ -64,7 +62,6 @@ const getRoomFeed = asyncHandler(async (req, res) => {
 
 // 🏫 CREATE ROOM POST
 const createRoomPost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { roomId } = req.params;
   const { content, type = POST_TYPES.GENERAL, attachments = [] } = req.body;
 
@@ -94,8 +91,6 @@ const createRoomPost = asyncHandler(async (req, res) => {
 
 // 🚀 3. GET MY ROOMS
 const getMyRooms = asyncHandler(async (req, res) => {
-  await _simulateLatency();
-
   const rooms = [
     {
       _id: "room_cse101",
@@ -130,7 +125,6 @@ const getMyRooms = asyncHandler(async (req, res) => {
 
 // 🚀 4. CREATE ROOM
 const createRoom = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { name, code, session, section } = req.body;
 
   if (!name || !code) {
@@ -156,7 +150,6 @@ const createRoom = asyncHandler(async (req, res) => {
 
 // 🚀 5. GET ROOM DETAILS
 const getRoomDetails = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { roomId } = req.params;
 
   const room = {

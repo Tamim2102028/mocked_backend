@@ -3,12 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import mongoose from "mongoose";
 
-const _simulateLatency = () => new Promise((r) => setTimeout(r, 1000));
 const _objectId = () => new mongoose.Types.ObjectId().toString();
 
 // 👥 GET GROUP FEED
 const getGroupFeed = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { groupId } = req.params;
 
   const posts = [
@@ -37,7 +35,6 @@ const getGroupFeed = asyncHandler(async (req, res) => {
 
 // 👥 CREATE GROUP POST
 const createGroupPost = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { groupId } = req.params;
   const { content, type = POST_TYPES.GENERAL } = req.body;
 
@@ -65,7 +62,6 @@ const createGroupPost = asyncHandler(async (req, res) => {
 
 // 🚀 3. CREATE GROUP
 const createGroup = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { name, description, privacy = "PUBLIC" } = req.body;
 
   if (!name) {
@@ -92,8 +88,6 @@ const createGroup = asyncHandler(async (req, res) => {
 
 // 🚀 4. GET MY GROUPS
 const getMyGroups = asyncHandler(async (req, res) => {
-  await _simulateLatency();
-
   const groups = [
     {
       _id: "grp_1",
@@ -120,7 +114,6 @@ const getMyGroups = asyncHandler(async (req, res) => {
 
 // 🚀 5. JOIN GROUP
 const joinGroup = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { groupId } = req.params;
 
   return res
@@ -136,7 +129,6 @@ const joinGroup = asyncHandler(async (req, res) => {
 
 // 🚀 6. GET GROUP DETAILS
 const getGroupDetails = asyncHandler(async (req, res) => {
-  await _simulateLatency();
   const { groupId } = req.params;
 
   const group = {

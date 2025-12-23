@@ -9,6 +9,7 @@ import {
 } from "../constants/index.js";
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
+import { Post } from "../models/post.model.js";
 
 // =========================
 // 🚀 1. CREATE POST
@@ -31,31 +32,86 @@ const createPost = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  /*
- const post = await PostModel.create({
+  // ✅ Validate Enums
+  if (!Object.values(POST_TYPES).includes(type)) {
+    throw new ApiError(400, "Invalid post type");
+  }
+  if (!Object.values(POST_TARGET_MODELS).includes(postOnModel)) {
+    throw new ApiError(400, "Invalid target model");
+  }
+
+  // ✅ Poll Validation
+  if (type === POST_TYPES.POLL) {
+    if (!pollOptions || pollOptions.length < 2) {
+      throw new ApiError(400, "Poll must have at least 2 options");
+    }
+  }
+
+  // ✅ Profile Post Restrictions
+  // When posting on a User Profile (postOnModel === 'User'),
+  // visibility cannot be 'INTERNAL'.
+  if (postOnModel === POST_TARGET_MODELS.USER) {
+    if (visibility === POST_VISIBILITY.INTERNAL) {
+      throw new ApiError(
+        400,
+        "Internal visibility is not allowed for profile posts"
+      );
+    }
+  }
+
+  const post = await Post.create({
     content: content,
     attachments: attachments || [],
     type: type,
-    postOnId: postOnId,
     postOnModel: postOnModel,
+    postOnId: postOnId,
     author: req.user._id,
     visibility: visibility || POST_VISIBILITY.PUBLIC,
     pollOptions: pollOptions || [],
     tags: tags || [],
-    
+
     likesCount: 0,
     commentsCount: 0,
     sharesCount: 0,
+
     isArchived: false,
     isPinned: false,
     isDeleted: false,
-  })
+  });
 
-  */
+  // ✅ Populate Author details for Frontend immediate update
+  const populatedPost = await Post.findById(post._id).populate(
+    "author",
+    "fullName avatar userName"
+  );
+
+  // TODO: Implement Read/View Model Logic
+  // When a post is created, we should automatically create an entry in the
+  // Read/View Model marking it as 'read' for the author (since they created it).
+  // Example: await PostView.create({ post: post._id, user: req.user._id, readAt: new Date() });
+
+  // 🔄 Transform to Match Frontend Expectation (Mock Data Structure)
+  const formattedPost = {
+    ...populatedPost.toObject(),
+    attachments: populatedPost.attachments || [],
+    stats: {
+      likes: populatedPost.likesCount || 0,
+      comments: populatedPost.commentsCount || 0,
+      shares: populatedPost.sharesCount || 0,
+    },
+    context: {
+      isLiked: false,
+      isSaved: false,
+      isMine: true,
+      isRead: true,
+    },
+  };
 
   return res
     .status(201)
-    .json(new ApiResponse(201, { post }, "Post created successfully"));
+    .json(
+      new ApiResponse(201, { post: formattedPost }, "Post created successfully")
+    );
 });
 
 // =========================
@@ -130,189 +186,80 @@ const toggleMarkAsRead = asyncHandler(async (req, res) => {
 // =========================
 const getUserProfilePosts = asyncHandler(async (req, res) => {
   const { username } = req.params;
-  const isOwnProfile = req.user.userName === username;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  // 1. Fetch User Details (from DB or req.user)
-  let authorDetails;
+  // 1. Find Target User
+  const targetUser = await User.findOne({ userName: username }).select("_id");
+  if (!targetUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const currentUserId = req.user?._id;
+  const isOwnProfile = currentUserId?.toString() === targetUser._id.toString();
+
+  // 2. Build Query based on Visibility & Friendship
+  let visibilityQuery = {
+    postOnId: targetUser._id,
+    postOnModel: POST_TARGET_MODELS.USER,
+    isDeleted: false,
+    isArchived: false,
+  };
 
   if (isOwnProfile) {
-    authorDetails = {
-      _id: req.user._id,
-      fullName: req.user.fullName,
-      userName: req.user.userName,
-      avatar: req.user.avatar,
-      userType: req.user.userType,
-    };
+    // Own Profile: See everything (Public, Connections, Only Me, Internal)
+    // No additional filter needed
   } else {
-    const user = await User.findOne({ userName: username }).select(
-      "_id fullName userName avatar userType"
-    );
+    // Visitor: Check Relationship
+    // TODO: Check Friendship Status (Mocked as false for now, need Friendship Service)
+    const isFriend = false;
 
-    if (!user) {
-      throw new ApiError(404, "User not found");
+    if (isFriend) {
+      // Friend: See Public + Connections
+      visibilityQuery.visibility = {
+        $in: [POST_VISIBILITY.PUBLIC, POST_VISIBILITY.CONNECTIONS],
+      };
+    } else {
+      // Public User: See only Public
+      visibilityQuery.visibility = POST_VISIBILITY.PUBLIC;
     }
-
-    authorDetails = {
-      _id: user._id,
-      fullName: user.fullName,
-      userName: user.userName,
-      avatar: user.avatar,
-      userType: user.userType || "student", // Fallback if missing
-    };
   }
 
-  // 📝 Future Logic:
-  // 1. Find user by username
-  // 2. Query Post model where author._id === user._id
-  // 3. Filter by privacy settings (public/friends/only_me)
-  // 4. Populate author details
-  // 5. Paginate results
+  // 3. Fetch Posts with Pagination
+  const posts = await Post.find(visibilityQuery)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate("author", "fullName avatar userName")
+    .lean();
 
-  let posts = [];
+  // 4. Add Context (isLiked, isSaved, etc.)
+  // TODO: Fetch Likes/Saved status from Reaction/Bookmark Service
+  const postsWithContext = posts.map((post) => ({
+    ...post,
+    stats: {
+      likes: post.likesCount || 0,
+      comments: post.commentsCount || 0,
+      shares: post.sharesCount || 0,
+    },
+    context: {
+      isLiked: false, // TODO: Check if currentUser liked this post (requires Like Model)
+      isSaved: false, // TODO: Check if currentUser saved this post (requires SavedPost Model)
+      isMine: isOwnProfile,
+      isRead: true, // TODO: Check if currentUser read this post (requires Read/View Model)
+    },
+  }));
 
-  if (isOwnProfile) {
-    posts = [
-      {
-        _id: "my_p_1",
-        content: "Just updated my profile picture! 📸 #NewLook",
-        images: [],
-        videos: [],
-        docs: [],
-        type: POST_TYPES.GENERAL,
-        postOnModel: POST_TARGET_MODELS.USER,
-        postOnId: authorDetails._id,
-        visibility: POST_VISIBILITY.PUBLIC,
-        author: authorDetails,
-        stats: { likes: 10, comments: 2, shares: 0 },
-        context: {
-          isLiked: false,
-          isSaved: false,
-          isMine: true,
-          isRead: true,
-        },
-        createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        updatedAt: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        _id: "my_p_2_private",
-        content: "Personal notes: Need to finish the project by Friday. 📝",
-        images: [],
-        videos: [],
-        docs: [],
-        type: POST_TYPES.GENERAL,
-        postOnModel: POST_TARGET_MODELS.USER,
-        postOnId: authorDetails._id,
-        visibility: POST_VISIBILITY.ONLY_ME, // ✅ Visible only to me
-        author: authorDetails,
-        stats: { likes: 0, comments: 0, shares: 0 },
-        context: {
-          isLiked: false,
-          isSaved: false,
-          isMine: true,
-          isRead: true,
-        },
-        createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        updatedAt: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        _id: "my_p_3_img",
-        content: "Throwback to the last vacation! 🌊",
-        images: [
-          "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=1000",
-        ],
-        videos: [],
-        docs: [],
-        type: POST_TYPES.GENERAL,
-        postOnModel: POST_TARGET_MODELS.USER,
-        postOnId: authorDetails._id,
-        visibility: POST_VISIBILITY.CONNECTIONS,
-        author: authorDetails,
-        stats: { likes: 25, comments: 5, shares: 1 },
-        context: {
-          isLiked: true,
-          isSaved: true,
-          isMine: true,
-          isRead: true,
-        },
-        createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        updatedAt: new Date(Date.now() - 172800000).toISOString(),
-      },
-    ];
-  } else {
-    posts = [
-      {
-        _id: "other_p_1",
-        content: `Hello from ${authorDetails.fullName}! 👋 This is a public post.`,
-        images: [
-          "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?auto=format&fit=crop&q=80&w=1000",
-        ],
-        videos: [],
-        docs: [],
-        type: POST_TYPES.GENERAL,
-        postOnModel: POST_TARGET_MODELS.USER,
-        postOnId: authorDetails._id,
-        visibility: POST_VISIBILITY.PUBLIC,
-        author: authorDetails,
-        stats: { likes: 125, comments: 45, shares: 12 },
-        context: {
-          isLiked: true,
-          isSaved: true,
-          isMine: false,
-          isRead: true,
-        },
-        createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        updatedAt: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        _id: "other_p_1",
-        content: `Hello from ${authorDetails.fullName}! 👋 This is a friend only post.`,
-        images: [],
-        videos: [],
-        docs: [],
-        type: POST_TYPES.GENERAL,
-        postOnModel: POST_TARGET_MODELS.USER,
-        postOnId: authorDetails._id,
-        visibility: POST_VISIBILITY.CONNECTIONS, // ✅ Visible if friends (Mocking friendship)
-        author: authorDetails,
-        stats: { likes: 125, comments: 45, shares: 12 },
-        context: {
-          isLiked: true,
-          isSaved: true,
-          isMine: false,
-          isRead: true,
-        },
-        createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        updatedAt: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        _id: "other_p_2",
-        content: "Enjoying the weekend! ☀️",
-        images: [],
-        videos: [],
-        docs: [],
-        type: POST_TYPES.GENERAL,
-        postOnModel: POST_TARGET_MODELS.USER,
-        postOnId: authorDetails._id,
-        visibility: POST_VISIBILITY.CONNECTIONS, // ✅ Visible if friends (Mocking friendship)
-        author: authorDetails,
-        stats: { likes: 50, comments: 10, shares: 1 },
-        context: {
-          isLiked: false,
-          isSaved: false,
-          isMine: false,
-          isRead: true,
-        },
-        createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        updatedAt: new Date(Date.now() - 172800000).toISOString(),
-      },
-    ];
-  }
+  // 5. Count Total Documents for Pagination
+  const totalDocs = await Post.countDocuments(visibilityQuery);
+  const hasNextPage = totalDocs > skip + posts.length;
 
   const data = {
-    posts,
-    hasNextPage: false,
-    nextPage: null,
-    totalDocs: posts.length,
+    posts: postsWithContext,
+    hasNextPage,
+    nextPage: hasNextPage ? page + 1 : null,
+    totalDocs,
   };
 
   return res

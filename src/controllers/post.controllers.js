@@ -262,6 +262,28 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
   const currentUserId = req.user?._id;
   const isOwnProfile = currentUserId?.toString() === targetUser._id.toString();
 
+  // 1.1 Block Check
+  if (currentUserId && !isOwnProfile) {
+    const blockRelation = await Friendship.findOne({
+      $or: [
+        { requester: currentUserId, recipient: targetUser._id },
+        { requester: targetUser._id, recipient: currentUserId },
+      ],
+      status: FRIENDSHIP_STATUS.BLOCKED,
+    });
+
+    if (blockRelation) {
+      if (blockRelation.requester.toString() === targetUser._id.toString()) {
+        throw new ApiError(403, "You are blocked by this user");
+      } else {
+        throw new ApiError(
+          403,
+          "You have blocked this user. Unblock to see posts."
+        );
+      }
+    }
+  }
+
   // 2. Build Query based on Visibility & Friendship
   let visibilityQuery = {
     postOnId: targetUser._id,

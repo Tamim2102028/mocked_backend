@@ -507,10 +507,13 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
     isArchived: false,
   };
 
+  let postsCount = 0;
+
   if (isSelf) {
     // Own Profile: See everything
-  } else {
-    // Visitor: Check Relationship
+    postsCount = await Post.countDocuments(visibilityQuery);
+  } else if (!isBlockedByMe && !isBlockedByTarget) {
+    // Visitor: Check Relationship (Only if NOT blocked)
     const isFriend = relationStatus === PROFILE_RELATION_STATUS.FRIEND;
     if (isFriend) {
       visibilityQuery.visibility = {
@@ -519,9 +522,10 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
     } else {
       visibilityQuery.visibility = POST_VISIBILITY.PUBLIC;
     }
+    postsCount = await Post.countDocuments(visibilityQuery);
+  } else {
+    // Blocked: postsCount remains 0
   }
-
-  const postsCount = await Post.countDocuments(visibilityQuery);
 
   // Recalculate counts to ensure accuracy (Temporary Fix for Dev)
   const realFollowersCount = await Follow.countDocuments({

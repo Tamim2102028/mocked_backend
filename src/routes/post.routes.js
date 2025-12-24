@@ -8,6 +8,7 @@ import {
   getUserProfilePosts,
   getFeedPosts,
   deletePost,
+  updatePost,
 } from "../controllers/post.controllers.js";
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get("/feed", getFeedPosts);
 router.post("/:postId/toggle-like", toggleLikePost);
 router.post("/:postId/comments", addComment);
 router.delete("/:postId", deletePost);
+router.patch("/:postId", updatePost);
 
 // ✅ View/Read Toggle Route
 router.post("/:postId/toggle-read", toggleMarkAsRead);

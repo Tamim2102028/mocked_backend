@@ -436,6 +436,46 @@ const deletePost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { postId }, "Post deleted successfully"));
 });
 
+// =========================
+// 🚀 8. UPDATE POST
+// =========================
+const updatePost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { content, visibility, tags } = req.body;
+
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // Check Authorization
+  if (post.author.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not authorized to update this post");
+  }
+
+  if (post.isDeleted) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // Update fields
+  if (content !== undefined) post.content = content;
+  if (visibility !== undefined) post.visibility = visibility;
+  if (tags !== undefined) post.tags = tags;
+
+  await post.save();
+
+  // Return the updated post with author details populated
+  const updatedPost = await Post.findById(postId).populate(
+    "author",
+    "fullName avatar userName"
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedPost, "Post updated successfully"));
+});
+
 export {
   createPost,
   getFeedPosts,
@@ -444,4 +484,5 @@ export {
   toggleMarkAsRead,
   getUserProfilePosts,
   deletePost,
+  updatePost,
 };

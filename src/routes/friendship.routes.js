@@ -33,16 +33,16 @@ router.get("/requests/received", getReceivedRequests);
 // Send a friend request to a user
 router.post("/request/send/:userId", sendFriendRequest);
 
-// Accept a request that I received
-router.patch("/request/accept/:requestId", acceptFriendRequest);
+// Accept a request that I received (from userId)
+router.patch("/request/accept/:userId", acceptFriendRequest);
 
-// Reject a request that I received
-router.delete("/request/reject/:requestId", rejectReceivedRequest);
+// Reject a request that I received (from userId)
+router.delete("/request/reject/:userId", rejectReceivedRequest);
 
-// Cancel a request that I sent
-router.delete("/request/cancel/:requestId", cancelSentRequest);
+// Cancel a request that I sent (to userId)
+router.delete("/request/cancel/:userId", cancelSentRequest);
 
-// Unfriend a user I am connected with
-router.delete("/unfriend/:friendshipId", unfriendUser);
+// Unfriend a user I am connected with (userId)
+router.delete("/unfriend/:userId", unfriendUser);
 
 export default router;

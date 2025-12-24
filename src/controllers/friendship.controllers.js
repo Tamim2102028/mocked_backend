@@ -1,9 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { FRIENDSHIP_STATUS } from "../constants/index.js";
+import { FOLLOW_TARGET_MODELS, FRIENDSHIP_STATUS } from "../constants/index.js";
 import { Friendship } from "../models/friendship.model.js";
 import { User } from "../models/user.model.js";
+import { Follow } from "../models/follow.model.js";
 
 // ==============================================================================
 // 🤝 1. GET FRIENDS LIST
@@ -69,7 +70,7 @@ const getReceivedRequests = asyncHandler(async (req, res) => {
 // 📤 3. ACTIONS
 // ==============================================================================
 
-// ACTION 1: SEND FRIEND REQUEST
+// ACTION 1: SEND FRIEND REQUEST (auto follow)
 const sendFriendRequest = asyncHandler(async (req, res) => {
   const { userId: targetUserId } = req.params;
   const currentUserId = req.user._id;
@@ -116,6 +117,22 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
     recipient: targetUserId,
     status: FRIENDSHIP_STATUS.PENDING,
   });
+
+  // ✅ Auto-follow on friend request
+  // Check if already following
+  const existingFollow = await Follow.findOne({
+    follower: currentUserId,
+    following: targetUserId,
+    followingModel: FOLLOW_TARGET_MODELS.USER,
+  });
+
+  if (!existingFollow) {
+    await Follow.create({
+      follower: currentUserId,
+      following: targetUserId,
+      followingModel: FOLLOW_TARGET_MODELS.USER,
+    });
+  }
 
   return res.status(201).json(
     new ApiResponse(

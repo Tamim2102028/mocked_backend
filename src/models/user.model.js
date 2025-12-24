@@ -67,7 +67,8 @@ const userSchema = new Schema(
 
     // --- Social Stats (✅ ADDED) ---
     connectionsCount: { type: Number, default: 0 }, // Friends Count
-    followingCount: { type: Number, default: 0 }, // Institutions Followed
+    followersCount: { type: Number, default: 0 }, // Followers Count
+    followingCount: { type: Number, default: 0 }, // Following Count
 
     // --- Institutional Data ---
     userType: {

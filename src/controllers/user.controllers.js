@@ -10,10 +10,12 @@ import {
   POST_TARGET_MODELS,
   POST_VISIBILITY,
   FRIENDSHIP_STATUS,
+  FOLLOW_TARGET_MODELS,
 } from "../constants/index.js";
 import { findInstitutionByEmailDomain } from "../services/academic.service.js";
 import { Post } from "../models/post.model.js";
 import { Friendship } from "../models/friendship.model.js";
+import { Follow } from "../models/follow.model.js";
 
 // --- Utility: Token Generator ---
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -454,10 +456,12 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   // 2. Determine Friendship Status
   const isSelf = req.user?._id.toString() === user._id.toString();
   let relationStatus = PROFILE_RELATION_STATUS.NOT_FRIENDS;
+  let isFollowing = false;
 
   if (isSelf) {
     relationStatus = PROFILE_RELATION_STATUS.SELF;
   } else {
+    // Friendship Status
     const friendship = await Friendship.findOne({
       $or: [
         { requester: req.user._id, recipient: user._id },
@@ -478,6 +482,14 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
         }
       }
     }
+
+    // Follow Status
+    const follow = await Follow.findOne({
+      follower: req.user._id,
+      following: user._id,
+      followingModel: FOLLOW_TARGET_MODELS.USER,
+    });
+    if (follow) isFollowing = true;
   }
 
   // 3. Calculate Posts Count (Dynamic)
@@ -504,15 +516,29 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
 
   const postsCount = await Post.countDocuments(visibilityQuery);
 
+  // Recalculate counts to ensure accuracy (Temporary Fix for Dev)
+  const realFollowersCount = await Follow.countDocuments({
+    following: user._id,
+    followingModel: FOLLOW_TARGET_MODELS.USER,
+  });
+  const realFollowingCount = await Follow.countDocuments({
+    follower: user._id,
+  });
+  const realConnectionsCount = await Friendship.countDocuments({
+    $or: [{ requester: user._id }, { recipient: user._id }],
+    status: FRIENDSHIP_STATUS.ACCEPTED,
+  });
+
   const userProfileHeader = {
     ...user.toObject(),
     profile_relation_status: relationStatus,
+    isFollowing,
     // Stats
     stats: {
       postsCount: postsCount,
-      friendsCount: user.connectionsCount || 0,
-      followersCount: 250, // TODO: Implement Followers
-      followingCount: user.followingCount || 0,
+      friendsCount: realConnectionsCount,
+      followersCount: realFollowersCount,
+      followingCount: realFollowingCount,
       publicFilesCount: 7, // TODO: Implement Files
     },
     isOwnProfile: isSelf,

@@ -52,6 +52,8 @@ const getPostComments = asyncHandler(async (req, res) => {
     },
     isMine: comment.author._id.toString() === req.user._id.toString(),
     isLiked: likedCommentIds.has(comment._id.toString()),
+    isEdited: comment.isEdited,
+    updatedAt: comment.updatedAt,
   }));
 
   return res.status(200).json(

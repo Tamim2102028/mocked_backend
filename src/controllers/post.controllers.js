@@ -6,10 +6,13 @@ import {
   POST_TYPES,
   ATTACHMENT_TYPES,
   POST_VISIBILITY,
+  REACTION_TARGET_MODELS,
 } from "../constants/index.js";
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
+import { PostRead } from "../models/postRead.model.js";
+import { Reaction } from "../models/reaction.model.js";
 
 // =========================
 // 🚀 1. CREATE POST
@@ -85,10 +88,11 @@ const createPost = asyncHandler(async (req, res) => {
     "fullName avatar userName"
   );
 
-  // TODO: Implement Read/View Model Logic
-  // When a post is created, we should automatically create an entry in the
-  // Read/View Model marking it as 'read' for the author (since they created it).
-  // Example: await PostView.create({ post: post._id, user: req.user._id, readAt: new Date() });
+  // ✅ Automatically mark as 'read' for the author
+  await PostRead.create({
+    post: post._id,
+    user: req.user._id,
+  });
 
   // 🔄 Transform to Match Frontend Expectation (Mock Data Structure)
   const formattedPost = {
@@ -103,7 +107,7 @@ const createPost = asyncHandler(async (req, res) => {
       isLiked: false,
       isSaved: false,
       isMine: true,
-      isRead: true,
+      isRead: true, // Author always reads their own post initially
     },
   };
 
@@ -127,20 +131,51 @@ const getFeedPosts = asyncHandler(async (req, res) => {
 
 const toggleLikePost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
-  // Mock Toggle Response
-  // 1. Find post by ID
-  // 2. Toggle isLiked status
-  // 3. Update likesCount
+  const userId = req.user._id;
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { postId, isLiked: true, likesCount: 25 },
-        "Post liked/unliked successfully"
-      )
-    );
+  // 1. Check if post exists
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // 2. Check if already liked
+  const existingReaction = await Reaction.findOne({
+    targetId: postId,
+    targetModel: REACTION_TARGET_MODELS.POST,
+    user: userId,
+  });
+
+  let isLiked = false;
+
+  if (existingReaction) {
+    // Unlike -> Delete Reaction (Middleware updates likesCount)
+    await Reaction.findByIdAndDelete(existingReaction._id);
+    isLiked = false;
+  } else {
+    // Like -> Create Reaction (Middleware updates likesCount)
+    await Reaction.create({
+      targetId: postId,
+      targetModel: REACTION_TARGET_MODELS.POST,
+      user: userId,
+    });
+    isLiked = true;
+  }
+
+  // 3. Get updated post stats
+  const updatedPost = await Post.findById(postId).select("likesCount");
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        postId,
+        isLiked,
+        likesCount: updatedPost.likesCount,
+      },
+      isLiked ? "Post liked" : "Post unliked"
+    )
+  );
 });
 
 const addComment = asyncHandler(async (req, res) => {
@@ -169,16 +204,42 @@ const addComment = asyncHandler(async (req, res) => {
 
 const toggleMarkAsRead = asyncHandler(async (req, res) => {
   const { postId } = req.params;
-  // Mock Toggle Read
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { targetId: postId, isRead: true },
-        "Read status toggled"
-      )
-    );
+  const userId = req.user._id;
+
+  // Check if already read
+  const existingRead = await PostRead.findOne({
+    post: postId,
+    user: userId,
+  });
+
+  if (existingRead) {
+    // Already read -> Mark as Unread (Delete entry)
+    await existingRead.deleteOne();
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { targetId: postId, isRead: false },
+          "Marked as unread"
+        )
+      );
+  } else {
+    // Not read -> Mark as Read (Create entry)
+    await PostRead.create({
+      post: postId,
+      user: userId,
+    });
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { targetId: postId, isRead: true },
+          "Marked as read"
+        )
+      );
+  }
 });
 
 // =========================
@@ -234,8 +295,31 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
     .populate("author", "fullName avatar userName")
     .lean();
 
-  // 4. Add Context (isLiked, isSaved, etc.)
-  // TODO: Fetch Likes/Saved status from Reaction/Bookmark Service
+  // 4. Add Context (isLiked, isSaved, isRead)
+  // Fetch Read Status for these posts
+  let viewedPostIds = new Set();
+  let likedPostIds = new Set();
+
+  if (currentUserId && posts.length > 0) {
+    const postIds = posts.map((p) => p._id);
+    const viewedPosts = await PostRead.find({
+      user: currentUserId,
+      post: { $in: postIds },
+    }).select("post");
+
+    viewedPostIds = new Set(viewedPosts.map((vp) => vp.post.toString()));
+
+    // Fetch Like Status (Reactions)
+    const likedPosts = await Reaction.find({
+      user: currentUserId,
+      targetModel: REACTION_TARGET_MODELS.POST,
+      targetId: { $in: postIds },
+    }).select("targetId");
+
+    likedPostIds = new Set(likedPosts.map((r) => r.targetId.toString()));
+  }
+
+  // TODO: Fetch Saved status from Bookmark Service
   const postsWithContext = posts.map((post) => ({
     ...post,
     stats: {
@@ -244,10 +328,10 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       shares: post.sharesCount || 0,
     },
     context: {
-      isLiked: false, // TODO: Check if currentUser liked this post (requires Like Model)
+      isLiked: likedPostIds.has(post._id.toString()),
       isSaved: false, // TODO: Check if currentUser saved this post (requires SavedPost Model)
       isMine: isOwnProfile,
-      isRead: true, // TODO: Check if currentUser read this post (requires Read/View Model)
+      isRead: viewedPostIds.has(post._id.toString()),
     },
   }));
 

@@ -457,6 +457,8 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   const isSelf = req.user?._id.toString() === user._id.toString();
   let relationStatus = PROFILE_RELATION_STATUS.NOT_FRIENDS;
   let isFollowing = false;
+  let isBlockedByMe = false;
+  let isBlockedByTarget = false;
 
   if (isSelf) {
     relationStatus = PROFILE_RELATION_STATUS.SELF;
@@ -474,6 +476,11 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
         relationStatus = PROFILE_RELATION_STATUS.FRIEND;
       } else if (friendship.status === FRIENDSHIP_STATUS.BLOCKED) {
         relationStatus = PROFILE_RELATION_STATUS.BLOCKED;
+        if (friendship.requester.toString() === req.user._id.toString()) {
+          isBlockedByMe = true;
+        } else {
+          isBlockedByTarget = true;
+        }
       } else if (friendship.status === FRIENDSHIP_STATUS.PENDING) {
         if (friendship.requester.toString() === req.user._id.toString()) {
           relationStatus = PROFILE_RELATION_STATUS.REQUEST_SENT;
@@ -533,6 +540,8 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
     ...user.toObject(),
     profile_relation_status: relationStatus,
     isFollowing,
+    isBlockedByMe,
+    isBlockedByTarget,
     // Stats
     stats: {
       postsCount: postsCount,

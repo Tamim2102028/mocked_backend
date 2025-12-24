@@ -107,7 +107,13 @@ const sendFriendRequest = asyncHandler(async (req, res) => {
       }
     }
     if (existingFriendship.status === FRIENDSHIP_STATUS.BLOCKED) {
-      throw new ApiError(400, "You cannot send request to this user");
+      if (
+        existingFriendship.requester.toString() === currentUserId.toString()
+      ) {
+        throw new ApiError(400, "You have blocked this user. Unblock first.");
+      } else {
+        throw new ApiError(400, "You are blocked by this user");
+      }
     }
   }
 
@@ -242,6 +248,101 @@ const unfriendUser = asyncHandler(async (req, res) => {
     );
 });
 
+// ==============================================================================
+// 🚫 4. BLOCK/UNBLOCK
+// ==============================================================================
+
+// ACTION 6: BLOCK USER
+const blockUser = asyncHandler(async (req, res) => {
+  const { userId: targetUserId } = req.params;
+  const currentUserId = req.user._id;
+
+  if (targetUserId === currentUserId.toString()) {
+    throw new ApiError(400, "You cannot block yourself");
+  }
+
+  // 1. Check if a block relation already exists
+  const existingBlock = await Friendship.findOne({
+    $or: [
+      { requester: currentUserId, recipient: targetUserId },
+      { requester: targetUserId, recipient: currentUserId },
+    ],
+    status: FRIENDSHIP_STATUS.BLOCKED,
+  });
+
+  if (existingBlock) {
+    if (existingBlock.requester.toString() === currentUserId.toString()) {
+      // Already blocked by me, just return success
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { blockRelation: existingBlock },
+            "User already blocked"
+          )
+        );
+    } else {
+      // I am blocked by the target user. I cannot block them back.
+      throw new ApiError(400, "You are blocked by this user");
+    }
+  }
+
+  // 2. Remove any existing friendship/request (Accepted or Pending)
+  await Friendship.findOneAndDelete({
+    $or: [
+      { requester: currentUserId, recipient: targetUserId },
+      { requester: targetUserId, recipient: currentUserId },
+    ],
+    status: { $ne: FRIENDSHIP_STATUS.BLOCKED },
+  });
+
+  // 3. Remove any existing follows (both ways)
+  await Follow.deleteMany({
+    $or: [
+      { follower: currentUserId, following: targetUserId },
+      { follower: targetUserId, following: currentUserId },
+    ],
+  });
+
+  // 4. Create Block relationship
+  const blockRelation = await Friendship.create({
+    requester: currentUserId,
+    recipient: targetUserId,
+    status: FRIENDSHIP_STATUS.BLOCKED,
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { blockRelation }, "User blocked successfully"));
+});
+
+// ACTION 7: UNBLOCK USER
+const unblockUser = asyncHandler(async (req, res) => {
+  const { userId: targetUserId } = req.params;
+  const currentUserId = req.user._id;
+
+  const blockRelation = await Friendship.findOneAndDelete({
+    requester: currentUserId,
+    recipient: targetUserId,
+    status: FRIENDSHIP_STATUS.BLOCKED,
+  });
+
+  if (!blockRelation) {
+    throw new ApiError(404, "Block relationship not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { userId: targetUserId },
+        "User unblocked successfully"
+      )
+    );
+});
+
 export {
   getFriendsList,
   getReceivedRequests,
@@ -250,4 +351,6 @@ export {
   rejectReceivedRequest,
   cancelSentRequest,
   unfriendUser,
+  blockUser,
+  unblockUser,
 };

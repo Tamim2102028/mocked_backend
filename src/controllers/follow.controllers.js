@@ -5,7 +5,8 @@ import { Follow } from "../models/follow.model.js";
 import { User } from "../models/user.model.js";
 import { Institution } from "../models/institution.model.js";
 import { Department } from "../models/department.model.js";
-import { FOLLOW_TARGET_MODELS } from "../constants/index.js";
+import { Friendship } from "../models/friendship.model.js";
+import { FOLLOW_TARGET_MODELS, FRIENDSHIP_STATUS } from "../constants/index.js";
 
 // ==============================================================================
 // 1. GENERALIZED FOLLOW (User, Page, Institution, Department)
@@ -26,6 +27,25 @@ const toggleFollow = asyncHandler(async (req, res) => {
     targetId === currentUserId.toString()
   ) {
     throw new ApiError(400, "You cannot follow yourself");
+  }
+
+  // 2.1 Block Check (Only for User)
+  if (targetModel === FOLLOW_TARGET_MODELS.USER) {
+    const blockRelation = await Friendship.findOne({
+      $or: [
+        { requester: currentUserId, recipient: targetId },
+        { requester: targetId, recipient: currentUserId },
+      ],
+      status: FRIENDSHIP_STATUS.BLOCKED,
+    });
+
+    if (blockRelation) {
+      if (blockRelation.requester.toString() === currentUserId.toString()) {
+        throw new ApiError(400, "You have blocked this user. Unblock first.");
+      } else {
+        throw new ApiError(400, "You are blocked by this user");
+      }
+    }
   }
 
   // 3. Check if Target Exists

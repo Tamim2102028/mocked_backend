@@ -8,6 +8,8 @@ import {
   rejectReceivedRequest,
   cancelSentRequest,
   unfriendUser,
+  blockUser,
+  unblockUser,
 } from "../controllers/friendship.controllers.js";
 
 const router = Router();
@@ -44,5 +46,11 @@ router.delete("/request/cancel/:userId", cancelSentRequest);
 
 // Unfriend a user I am connected with (userId)
 router.delete("/unfriend/:userId", unfriendUser);
+
+// Block a user (userId)
+router.post("/block/:userId", blockUser);
+
+// Unblock a user (userId)
+router.delete("/unblock/:userId", unblockUser);
 
 export default router;

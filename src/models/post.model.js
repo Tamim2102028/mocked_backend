@@ -12,6 +12,7 @@ const postSchema = new Schema(
       type: String,
       trim: true,
       required: true,
+      maxLength: 5000,
     },
 
     attachments: [

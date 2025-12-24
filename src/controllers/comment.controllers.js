@@ -52,7 +52,6 @@ const getPostComments = asyncHandler(async (req, res) => {
     },
     isMine: comment.author._id.toString() === req.user._id.toString(),
     isLiked: likedCommentIds.has(comment._id.toString()),
-    isEdited: comment.isEdited,
     updatedAt: comment.updatedAt,
   }));
 
@@ -170,7 +169,6 @@ const updateComment = asyncHandler(async (req, res) => {
   }
 
   comment.content = content;
-  comment.isEdited = true;
   await comment.save();
 
   const updatedComment = await Comment.findById(commentId).populate(
@@ -186,7 +184,6 @@ const updateComment = asyncHandler(async (req, res) => {
           _id: updatedComment._id,
           content: updatedComment.content,
           author: updatedComment.author,
-          isEdited: true,
           updatedAt: updatedComment.updatedAt,
         },
       },

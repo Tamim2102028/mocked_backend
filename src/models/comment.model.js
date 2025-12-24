@@ -15,7 +15,6 @@ const commentSchema = new Schema(
 
     likesCount: { type: Number, default: 0 },
 
-    isEdited: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }

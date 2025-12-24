@@ -15,6 +15,7 @@ import { Post } from "../models/post.model.js";
 import { PostRead } from "../models/postRead.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { Friendship } from "../models/friendship.model.js";
+import { Comment } from "../models/comment.model.js";
 
 // =========================
 // 🚀 1. CREATE POST
@@ -333,9 +334,30 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
   // Fetch Read Status for these posts
   let viewedPostIds = new Set();
   let likedPostIds = new Set();
+  const postIds = posts.map((p) => p._id);
+
+  // ✅ Get Real-time Comment Counts (Fix for mismatched counts)
+  const commentCounts = await Comment.aggregate([
+    {
+      $match: {
+        post: { $in: postIds },
+        isDeleted: false,
+      },
+    },
+    {
+      $group: {
+        _id: "$post",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const commentCountMap = {};
+  commentCounts.forEach((c) => {
+    commentCountMap[c._id.toString()] = c.count;
+  });
 
   if (currentUserId && posts.length > 0) {
-    const postIds = posts.map((p) => p._id);
     const viewedPosts = await PostRead.find({
       user: currentUserId,
       post: { $in: postIds },
@@ -358,7 +380,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
     ...post,
     stats: {
       likes: post.likesCount || 0,
-      comments: post.commentsCount || 0,
+      comments: commentCountMap[post._id.toString()] || 0, // Use calculated count
       shares: post.sharesCount || 0,
     },
     context: {

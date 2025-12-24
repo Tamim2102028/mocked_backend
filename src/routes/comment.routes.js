@@ -10,8 +10,8 @@ import {
 const router = Router();
 router.use(verifyJWT);
 
-router.get("/:postId", getPostComments); // GET /api/v1/comments/:postId
-router.post("/:postId", addComment); // POST /api/v1/comments/:postId
+router.get("/post/:postId", getPostComments);
+router.post("/post/:postId", addComment);
 router.delete("/:commentId", deleteComment);
 router.patch("/:commentId", updateComment);
 

@@ -7,12 +7,14 @@ import {
   ATTACHMENT_TYPES,
   POST_VISIBILITY,
   REACTION_TARGET_MODELS,
+  FRIENDSHIP_STATUS,
 } from "../constants/index.js";
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
 import { PostRead } from "../models/postRead.model.js";
 import { Reaction } from "../models/reaction.model.js";
+import { Friendship } from "../models/friendship.model.js";
 
 // =========================
 // 🚀 1. CREATE POST
@@ -273,8 +275,18 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
     // No additional filter needed
   } else {
     // Visitor: Check Relationship
-    // TODO: Check Friendship Status (Mocked as false for now, need Friendship Service)
-    const isFriend = false;
+    let isFriend = false;
+
+    if (currentUserId) {
+      const friendship = await Friendship.findOne({
+        $or: [
+          { requester: currentUserId, recipient: targetUser._id },
+          { requester: targetUser._id, recipient: currentUserId },
+        ],
+        status: FRIENDSHIP_STATUS.ACCEPTED,
+      });
+      if (friendship) isFriend = true;
+    }
 
     if (isFriend) {
       // Friend: See Public + Connections

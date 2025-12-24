@@ -9,9 +9,11 @@ import {
   PROFILE_RELATION_STATUS,
   POST_TARGET_MODELS,
   POST_VISIBILITY,
+  FRIENDSHIP_STATUS,
 } from "../constants/index.js";
 import { findInstitutionByEmailDomain } from "../services/academic.service.js";
 import { Post } from "../models/post.model.js";
+import { Friendship } from "../models/friendship.model.js";
 
 // --- Utility: Token Generator ---
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -449,9 +451,34 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
-  // 2. Add Stubbed Friendship Status (Mock Data)
-  // This avoids a separate call to checkFriendshipStatus
+  // 2. Determine Friendship Status
   const isSelf = req.user?._id.toString() === user._id.toString();
+  let relationStatus = PROFILE_RELATION_STATUS.NOT_FRIENDS;
+
+  if (isSelf) {
+    relationStatus = PROFILE_RELATION_STATUS.SELF;
+  } else {
+    const friendship = await Friendship.findOne({
+      $or: [
+        { requester: req.user._id, recipient: user._id },
+        { requester: user._id, recipient: req.user._id },
+      ],
+    });
+
+    if (friendship) {
+      if (friendship.status === FRIENDSHIP_STATUS.ACCEPTED) {
+        relationStatus = PROFILE_RELATION_STATUS.FRIEND;
+      } else if (friendship.status === FRIENDSHIP_STATUS.BLOCKED) {
+        relationStatus = PROFILE_RELATION_STATUS.BLOCKED;
+      } else if (friendship.status === FRIENDSHIP_STATUS.PENDING) {
+        if (friendship.requester.toString() === req.user._id.toString()) {
+          relationStatus = PROFILE_RELATION_STATUS.REQUEST_SENT;
+        } else {
+          relationStatus = PROFILE_RELATION_STATUS.REQUEST_RECEIVED;
+        }
+      }
+    }
+  }
 
   // 3. Calculate Posts Count (Dynamic)
   let visibilityQuery = {
@@ -464,8 +491,8 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   if (isSelf) {
     // Own Profile: See everything
   } else {
-    // Visitor: Check Relationship (Mocked)
-    const isFriend = false;
+    // Visitor: Check Relationship
+    const isFriend = relationStatus === PROFILE_RELATION_STATUS.FRIEND;
     if (isFriend) {
       visibilityQuery.visibility = {
         $in: [POST_VISIBILITY.PUBLIC, POST_VISIBILITY.CONNECTIONS],
@@ -479,14 +506,14 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
 
   const userProfileHeader = {
     ...user.toObject(),
-    profile_relation_status: PROFILE_RELATION_STATUS.NOT_FRIENDS, // Hardcoded for now
+    profile_relation_status: relationStatus,
     // Stats
     stats: {
       postsCount: postsCount,
-      friendsCount: 120,
-      followersCount: 250,
-      followingCount: 180,
-      publicFilesCount: 7,
+      friendsCount: user.connectionsCount || 0,
+      followersCount: 250, // TODO: Implement Followers
+      followingCount: user.followingCount || 0,
+      publicFilesCount: 7, // TODO: Implement Files
     },
     isOwnProfile: isSelf,
   };

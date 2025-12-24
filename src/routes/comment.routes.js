@@ -5,6 +5,7 @@ import {
   deleteComment,
   addComment,
   updateComment,
+  toggleCommentLike,
 } from "../controllers/comment.controllers.js";
 
 const router = Router();
@@ -14,5 +15,6 @@ router.get("/post/:postId", getPostComments);
 router.post("/post/:postId", addComment);
 router.delete("/:commentId", deleteComment);
 router.patch("/:commentId", updateComment);
+router.post("/:commentId/toggle-like", toggleCommentLike);
 
 export default router;

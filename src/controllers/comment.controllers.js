@@ -3,6 +3,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Comment } from "../models/comment.model.js";
 import { Post } from "../models/post.model.js";
+import { Reaction } from "../models/reaction.model.js";
+import { REACTION_TARGET_MODELS } from "../constants/index.js";
 import mongoose from "mongoose";
 
 // 🚀 1. GET COMMENTS BY POST ID (With Pagination & Soft Delete check)
@@ -27,6 +29,17 @@ const getPostComments = asyncHandler(async (req, res) => {
     isDeleted: false,
   });
 
+  // Check if current user liked these comments
+  const commentIds = comments.map((c) => c._id);
+  const userReactions = await Reaction.find({
+    targetId: { $in: commentIds },
+    targetModel: REACTION_TARGET_MODELS.COMMENT,
+    user: req.user._id,
+  });
+  const likedCommentIds = new Set(
+    userReactions.map((r) => r.targetId.toString())
+  );
+
   // ফরম্যাট করা ডাটা (ফ্রন্টএন্ডের জন্য)
   const formattedComments = comments.map((comment) => ({
     _id: comment._id,
@@ -38,7 +51,7 @@ const getPostComments = asyncHandler(async (req, res) => {
       likes: comment.likesCount,
     },
     isMine: comment.author._id.toString() === req.user._id.toString(),
-    isLiked: false, // এটা পরে রিয়েকশন টেবিল থেকে চেক করা যাবে
+    isLiked: likedCommentIds.has(comment._id.toString()),
   }));
 
   return res.status(200).json(
@@ -180,4 +193,45 @@ const updateComment = asyncHandler(async (req, res) => {
   );
 });
 
-export { getPostComments, addComment, deleteComment, updateComment };
+// 🚀 5. TOGGLE COMMENT LIKE
+const toggleCommentLike = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const userId = req.user._id;
+
+  const comment = await Comment.findById(commentId);
+  if (!comment) {
+    throw new ApiError(404, "Comment not found");
+  }
+
+  const existingReaction = await Reaction.findOne({
+    targetId: commentId,
+    targetModel: REACTION_TARGET_MODELS.COMMENT,
+    user: userId,
+  });
+
+  let isLiked = false;
+
+  if (existingReaction) {
+    await Reaction.findByIdAndDelete(existingReaction._id);
+    isLiked = false;
+  } else {
+    await Reaction.create({
+      targetId: commentId,
+      targetModel: REACTION_TARGET_MODELS.COMMENT,
+      user: userId,
+    });
+    isLiked = true;
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { isLiked }, "Comment like toggled"));
+});
+
+export {
+  getPostComments,
+  addComment,
+  deleteComment,
+  updateComment,
+  toggleCommentLike,
+};

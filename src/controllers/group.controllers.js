@@ -8,56 +8,130 @@ const _objectId = () => new mongoose.Types.ObjectId().toString();
 // 👥 GET GROUP FEED
 const getGroupFeed = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
 
-  const posts = [
-    {
-      _id: "grp_post_1",
-      content: "Physics Chapter 5 এর নোটস কারো কাছে আছে?",
-      type: POST_TYPES.QUESTION,
-      postOnModel: POST_TARGET_MODELS.GROUP,
-      postOnId: groupId,
-      author: {
-        _id: "u_std_5",
-        fullName: "Sumaya",
-        userName: "sumaya_s",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sumaya",
-      },
-      stats: { likes: 2, comments: 8, shares: 0 },
-      context: { isLiked: false, isSaved: false, isRead: true, isMine: false },
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  const posts = await Post.find({
+    postOnModel: POST_TARGET_MODELS.GROUP,
+    postOnId: groupId,
+    isDeleted: false,
+  })
+    .populate("author", "fullName userName avatar")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  const totalPosts = await Post.countDocuments({
+    postOnModel: POST_TARGET_MODELS.GROUP,
+    postOnId: groupId,
+    isDeleted: false,
+  });
+
+  const formattedPosts = posts.map((post) => ({
+    _id: post._id,
+    content: post.content,
+    type: post.type,
+    postOnModel: post.postOnModel,
+    postOnId: post.postOnId,
+    author: post.author,
+    stats: {
+      likes: post.likesCount,
+      comments: post.commentsCount,
+      shares: post.sharesCount,
     },
-  ];
+    context: {
+      isLiked: false, // TODO: Implement reaction check
+      isSaved: false,
+      isRead: true,
+      isMine: post.author._id.toString() === req.user._id.toString(),
+    },
+    createdAt: post.createdAt,
+    isEdited: post.isEdited,
+    editedAt: post.editedAt,
+    tags: post.tags,
+    images: post.attachments
+      ?.filter((a) => a.type === "image")
+      .map((a) => a.url),
+  }));
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { posts }, "Group feed fetched"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        posts: formattedPosts,
+        pagination: {
+          total: totalPosts,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(totalPosts / limit),
+        },
+      },
+      "Group feed fetched"
+    )
+  );
 });
 
 // 👥 CREATE GROUP POST
 const createGroupPost = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { content, type = POST_TYPES.GENERAL } = req.body;
+  const { content, type = POST_TYPES.GENERAL, attachments, tags } = req.body;
 
-  const post = {
-    _id: _objectId(),
+  if (!content) {
+    throw new ApiError(400, "Content is required");
+  }
+
+  const group = await Group.findById(groupId);
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  const post = await Post.create({
     content,
     type,
     postOnModel: POST_TARGET_MODELS.GROUP,
     postOnId: groupId,
-    author: {
-      _id: req.user._id,
-      fullName: req.user.fullName,
-      userName: req.user.userName,
-      avatar: req.user.avatar,
+    author: req.user._id,
+    attachments: attachments || [],
+    tags: tags || [],
+    visibility: POST_VISIBILITY.PUBLIC, // Group posts are usually public within context or handled by group privacy
+  });
+
+  const populatedPost = await Post.findById(post._id).populate(
+    "author",
+    "fullName userName avatar"
+  );
+
+  const formattedPost = {
+    _id: populatedPost._id,
+    content: populatedPost.content,
+    type: populatedPost.type,
+    postOnModel: populatedPost.postOnModel,
+    postOnId: populatedPost.postOnId,
+    author: populatedPost.author,
+    stats: {
+      likes: 0,
+      comments: 0,
+      shares: 0,
     },
-    stats: { likes: 0, comments: 0, shares: 0 },
-    context: { isLiked: false, isSaved: false, isRead: true, isMine: true },
-    createdAt: new Date().toISOString(),
+    context: {
+      isLiked: false,
+      isSaved: false,
+      isRead: true,
+      isMine: true,
+    },
+    createdAt: populatedPost.createdAt,
+    isEdited: populatedPost.isEdited,
+    editedAt: populatedPost.editedAt,
+    tags: populatedPost.tags,
+    images: populatedPost.attachments
+      ?.filter((a) => a.type === "image")
+      .map((a) => a.url),
   };
 
   return res
     .status(201)
-    .json(new ApiResponse(201, { post }, "Posted in group"));
+    .json(new ApiResponse(201, { post: formattedPost }, "Posted in group"));
 });
 
 // 🚀 3. CREATE GROUP

@@ -11,6 +11,7 @@ import {
   updateUserAvatar,
   updateUserCoverImage, // (যদি কন্ট্রোলার বানিয়ে থাকেন, না বানালে কমেন্ট করে রাখবেন)
   getUserProfileHeader,
+  getUserDetails,
 } from "../controllers/user.controllers.js";
 
 // Middlewares
@@ -89,5 +90,6 @@ router.patch(
 
 // --- Public Profile View ---
 router.get("/p/:username", verifyJWT, getUserProfileHeader);
+router.get("/details/:username", verifyJWT, getUserDetails);
 
 export default router;

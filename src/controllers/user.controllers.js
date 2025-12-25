@@ -568,6 +568,30 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
     );
 });
 
+// ==============================================================================
+// 💡 GET USER DETAILS (Lightweight - No Relations/Stats)
+// ==============================================================================
+const getUserDetails = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  // 1. Find User by username
+  const user = await User.findOne({ userName: username })
+    .select("-password -refreshToken") // Exclude sensitive fields
+    .populate([
+      { path: "institution", select: "name" },
+      { path: "academicInfo.department", select: "name" },
+    ]);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // 2. Return direct user data
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User details fetched successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -580,4 +604,5 @@ export {
   updateUserCoverImage,
   updateAccountDetails,
   getUserProfileHeader,
+  getUserDetails,
 };

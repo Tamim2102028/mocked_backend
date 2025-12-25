@@ -541,7 +541,15 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   });
 
   const userProfileHeader = {
-    ...user.toObject(),
+    _id: user._id,
+    userName: user.userName,
+    fullName: user.fullName,
+    avatar: user.avatar,
+    coverImage: user.coverImage,
+    bio: user.bio,
+    userType: user.userType,
+    institution: user.institution,
+    academicInfo: user.academicInfo,
     profile_relation_status: relationStatus,
     isFollowing,
     isBlockedByMe,

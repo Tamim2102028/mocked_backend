@@ -108,6 +108,7 @@ const addComment = asyncHandler(async (req, res) => {
     post: comment.post,
     author: comment.author,
     createdAt: comment.createdAt,
+    updatedAt: comment.updatedAt,
     stats: { likes: 0 },
     isMine: true,
     isLiked: false,

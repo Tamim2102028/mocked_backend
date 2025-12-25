@@ -35,19 +35,30 @@ const mapUserToResponse = (
 // ==============================================================================
 const getFriendsList = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  // Find all accepted friendships where current user is involved
-  const friendships = await Friendship.find({
+  const query = {
     $or: [{ requester: currentUserId }, { recipient: currentUserId }],
     status: FRIENDSHIP_STATUS.ACCEPTED,
-  }).populate({
-    path: "requester recipient",
-    select: "fullName userName avatar academicInfo userType institution",
-    populate: [
-      { path: "institution", select: "name" },
-      { path: "academicInfo.department", select: "name" },
-    ],
-  });
+  };
+
+  // 1. Get total count
+  const totalDocs = await Friendship.countDocuments(query);
+
+  // 2. Fetch paginated data
+  const friendships = await Friendship.find(query)
+    .populate({
+      path: "requester recipient",
+      select: "fullName userName avatar academicInfo userType institution",
+      populate: [
+        { path: "institution", select: "name" },
+        { path: "academicInfo.department", select: "name" },
+      ],
+    })
+    .skip(skip)
+    .limit(limit);
 
   // Format the response
   const friends = friendships
@@ -62,12 +73,23 @@ const getFriendsList = asyncHandler(async (req, res) => {
     })
     .filter(Boolean);
 
+  const totalPages = Math.ceil(totalDocs / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        totalCount: friends.length,
         users: friends,
+        pagination: {
+          totalDocs,
+          limit,
+          page,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
+        },
       },
       "Friends list fetched successfully"
     )
@@ -79,18 +101,30 @@ const getFriendsList = asyncHandler(async (req, res) => {
 // ==============================================================================
 const getReceivedRequests = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  const requests = await Friendship.find({
+  const query = {
     recipient: currentUserId,
     status: FRIENDSHIP_STATUS.PENDING,
-  }).populate({
-    path: "requester",
-    select: "fullName userName avatar academicInfo userType institution",
-    populate: [
-      { path: "institution", select: "name" },
-      { path: "academicInfo.department", select: "name" },
-    ],
-  });
+  };
+
+  // 1. Get total count
+  const totalDocs = await Friendship.countDocuments(query);
+
+  // 2. Fetch paginated data
+  const requests = await Friendship.find(query)
+    .populate({
+      path: "requester",
+      select: "fullName userName avatar academicInfo userType institution",
+      populate: [
+        { path: "institution", select: "name" },
+        { path: "academicInfo.department", select: "name" },
+      ],
+    })
+    .skip(skip)
+    .limit(limit);
 
   const formattedRequests = requests
     .map((req) => {
@@ -104,12 +138,23 @@ const getReceivedRequests = asyncHandler(async (req, res) => {
     })
     .filter(Boolean);
 
+  const totalPages = Math.ceil(totalDocs / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        totalCount: formattedRequests.length,
         users: formattedRequests,
+        pagination: {
+          totalDocs,
+          limit,
+          page,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
+        },
       },
       "Received requests fetched"
     )
@@ -121,18 +166,30 @@ const getReceivedRequests = asyncHandler(async (req, res) => {
 // ==============================================================================
 const getSentRequests = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  const requests = await Friendship.find({
+  const query = {
     requester: currentUserId,
     status: FRIENDSHIP_STATUS.PENDING,
-  }).populate({
-    path: "recipient",
-    select: "fullName userName avatar academicInfo userType institution",
-    populate: [
-      { path: "institution", select: "name" },
-      { path: "academicInfo.department", select: "name" },
-    ],
-  });
+  };
+
+  // 1. Get total count
+  const totalDocs = await Friendship.countDocuments(query);
+
+  // 2. Fetch paginated data
+  const requests = await Friendship.find(query)
+    .populate({
+      path: "recipient",
+      select: "fullName userName avatar academicInfo userType institution",
+      populate: [
+        { path: "institution", select: "name" },
+        { path: "academicInfo.department", select: "name" },
+      ],
+    })
+    .skip(skip)
+    .limit(limit);
 
   const formattedRequests = requests
     .map((req) => {
@@ -146,12 +203,23 @@ const getSentRequests = asyncHandler(async (req, res) => {
     })
     .filter(Boolean);
 
+  const totalPages = Math.ceil(totalDocs / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        totalCount: formattedRequests.length,
         users: formattedRequests,
+        pagination: {
+          totalDocs,
+          limit,
+          page,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
+        },
       },
       "Sent requests fetched"
     )
@@ -163,6 +231,9 @@ const getSentRequests = asyncHandler(async (req, res) => {
 // ==============================================================================
 const getSuggestions = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
   // 1. Find all friendships involving the current user
   const friendships = await Friendship.find({
@@ -179,28 +250,45 @@ const getSuggestions = asyncHandler(async (req, res) => {
   // 3. Exclude current user + users with existing relation
   const excludedIds = [...existingRelationIds, currentUserId];
 
-  // 4. Find potential suggestions (users not in excluded list)
-  const suggestions = await User.find({
+  const query = {
     _id: { $nin: excludedIds },
-  })
+  };
+
+  // 4. Get total count
+  const totalDocs = await User.countDocuments(query);
+
+  // 5. Find potential suggestions (users not in excluded list)
+  const suggestions = await User.find(query)
     .select("fullName userName avatar academicInfo userType institution")
     .populate([
       { path: "institution", select: "name" },
       { path: "academicInfo.department", select: "name" },
     ])
-    .limit(20); // Limit to 20 suggestions
+    .skip(skip)
+    .limit(limit);
 
-  // 5. Format response
+  // 6. Format response
   const formattedSuggestions = suggestions.map((user) =>
     mapUserToResponse(user, PROFILE_RELATION_STATUS.NOT_FRIENDS)
   );
+
+  const totalPages = Math.ceil(totalDocs / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
 
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        totalCount: formattedSuggestions.length,
         users: formattedSuggestions,
+        pagination: {
+          totalDocs,
+          limit,
+          page,
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
+        },
       },
       "Suggestions fetched"
     )

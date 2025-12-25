@@ -89,6 +89,8 @@ const postSchema = new Schema(
     isArchived: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
+    isEdited: { type: Boolean, default: false },
+    editedAt: { type: Date },
   },
   { timestamps: true }
 );

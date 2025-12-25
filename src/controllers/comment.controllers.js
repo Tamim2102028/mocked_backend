@@ -53,6 +53,8 @@ const getPostComments = asyncHandler(async (req, res) => {
     isMine: comment.author._id.toString() === req.user._id.toString(),
     isLiked: likedCommentIds.has(comment._id.toString()),
     updatedAt: comment.updatedAt,
+    isEdited: comment.isEdited,
+    editedAt: comment.editedAt,
   }));
 
   return res.status(200).json(
@@ -169,6 +171,8 @@ const updateComment = asyncHandler(async (req, res) => {
   }
 
   comment.content = content;
+  comment.isEdited = true;
+  comment.editedAt = new Date();
   await comment.save();
 
   const updatedComment = await Comment.findById(commentId).populate(
@@ -185,6 +189,8 @@ const updateComment = asyncHandler(async (req, res) => {
           content: updatedComment.content,
           author: updatedComment.author,
           updatedAt: updatedComment.updatedAt,
+          isEdited: updatedComment.isEdited,
+          editedAt: updatedComment.editedAt,
         },
       },
       "Comment updated successfully"

@@ -459,9 +459,27 @@ const updatePost = asyncHandler(async (req, res) => {
   }
 
   // Update fields
-  if (content !== undefined) post.content = content;
-  if (visibility !== undefined) post.visibility = visibility;
-  if (tags !== undefined) post.tags = tags;
+  let isChanged = false;
+  if (content !== undefined && content !== post.content) {
+    post.content = content;
+    isChanged = true;
+  }
+  if (visibility !== undefined && visibility !== post.visibility) {
+    post.visibility = visibility;
+    isChanged = true;
+  }
+  if (
+    tags !== undefined &&
+    JSON.stringify(tags) !== JSON.stringify(post.tags)
+  ) {
+    post.tags = tags;
+    isChanged = true;
+  }
+
+  if (isChanged) {
+    post.isEdited = true;
+    post.editedAt = new Date();
+  }
 
   await post.save();
 

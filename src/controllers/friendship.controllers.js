@@ -1,7 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { FOLLOW_TARGET_MODELS, FRIENDSHIP_STATUS } from "../constants/index.js";
+import {
+  FOLLOW_TARGET_MODELS,
+  FRIENDSHIP_STATUS,
+  PROFILE_RELATION_STATUS,
+} from "../constants/index.js";
 import { Friendship } from "../models/friendship.model.js";
 import { User } from "../models/user.model.js";
 import { Follow } from "../models/follow.model.js";
@@ -54,7 +58,7 @@ const getFriendsList = asyncHandler(async (req, res) => {
       const isRequester =
         f.requester._id.toString() === currentUserId.toString();
       const friend = isRequester ? f.recipient : f.requester;
-      return mapUserToResponse(friend, "accepted", f._id);
+      return mapUserToResponse(friend, PROFILE_RELATION_STATUS.FRIEND, f._id);
     })
     .filter(Boolean);
 
@@ -92,7 +96,11 @@ const getReceivedRequests = asyncHandler(async (req, res) => {
     .map((req) => {
       // Safety check: if requester is deleted/null, skip this request
       if (!req.requester) return null;
-      return mapUserToResponse(req.requester, "incoming_request", req._id);
+      return mapUserToResponse(
+        req.requester,
+        PROFILE_RELATION_STATUS.REQUEST_RECEIVED,
+        req._id
+      );
     })
     .filter(Boolean);
 
@@ -130,7 +138,11 @@ const getSentRequests = asyncHandler(async (req, res) => {
     .map((req) => {
       // Safety check: if recipient is deleted/null, skip this request
       if (!req.recipient) return null;
-      return mapUserToResponse(req.recipient, "outgoing_request", req._id);
+      return mapUserToResponse(
+        req.recipient,
+        PROFILE_RELATION_STATUS.REQUEST_SENT,
+        req._id
+      );
     })
     .filter(Boolean);
 
@@ -150,8 +162,38 @@ const getSentRequests = asyncHandler(async (req, res) => {
 // 💡 4. GET SUGGESTIONS
 // ==============================================================================
 const getSuggestions = asyncHandler(async (req, res) => {
-  // Temporary empty response as per user instruction
-  const formattedSuggestions = [];
+  const currentUserId = req.user._id;
+
+  // 1. Find all friendships involving the current user
+  const friendships = await Friendship.find({
+    $or: [{ requester: currentUserId }, { recipient: currentUserId }],
+  }).select("requester recipient");
+
+  // 2. Extract IDs of users who have a relation (friend, pending, blocked)
+  const existingRelationIds = friendships.map((f) =>
+    f.requester.toString() === currentUserId.toString()
+      ? f.recipient
+      : f.requester
+  );
+
+  // 3. Exclude current user + users with existing relation
+  const excludedIds = [...existingRelationIds, currentUserId];
+
+  // 4. Find potential suggestions (users not in excluded list)
+  const suggestions = await User.find({
+    _id: { $nin: excludedIds },
+  })
+    .select("fullName userName avatar academicInfo userType institution")
+    .populate([
+      { path: "institution", select: "name" },
+      { path: "academicInfo.department", select: "name" },
+    ])
+    .limit(20); // Limit to 20 suggestions
+
+  // 5. Format response
+  const formattedSuggestions = suggestions.map((user) =>
+    mapUserToResponse(user, PROFILE_RELATION_STATUS.NOT_FRIENDS)
+  );
 
   return res.status(200).json(
     new ApiResponse(

@@ -3,6 +3,8 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   getFriendsList,
   getReceivedRequests,
+  getSentRequests,
+  getSuggestions,
   sendFriendRequest,
   acceptFriendRequest,
   rejectReceivedRequest,
@@ -25,8 +27,11 @@ router.get("/list", getFriendsList);
 // Get requests I have received from others
 router.get("/requests/received", getReceivedRequests);
 
-// TODO: Add a route for sent requests if needed:
-// router.get("/requests/sent", getSentRequests);
+// Get requests I have sent to others
+router.get("/requests/sent", getSentRequests);
+
+// Get friend suggestions
+router.get("/suggestions", getSuggestions);
 
 // ==================================================
 // ⚙️ ACTION Routes (Specific & Secure)

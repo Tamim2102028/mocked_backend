@@ -6,36 +6,68 @@ import { Friendship } from "../models/friendship.model.js";
 import { User } from "../models/user.model.js";
 import { Follow } from "../models/follow.model.js";
 
+// Helper to format user response
+const mapUserToResponse = (
+  user,
+  friendshipStatus,
+  friendshipId = undefined
+) => {
+  if (!user) return null;
+  return {
+    _id: user._id,
+    userName: user.userName,
+    fullName: user.fullName,
+    avatar: user.avatar,
+    institution: user.institution || null,
+    userType: user.userType,
+    department: user.academicInfo?.department || null,
+    friendshipStatus,
+    friendshipId,
+  };
+};
+
 // ==============================================================================
 // 🤝 1. GET FRIENDS LIST
 // ==============================================================================
 const getFriendsList = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
 
-  // Find all accepted friendships where user is involved
+  // Find all accepted friendships where current user is involved
   const friendships = await Friendship.find({
     $or: [{ requester: currentUserId }, { recipient: currentUserId }],
     status: FRIENDSHIP_STATUS.ACCEPTED,
-  }).populate("requester recipient", "fullName userName avatar academicInfo");
-
-  // Format the response to return the *friend's* details
-  const friends = friendships.map((f) => {
-    const isRequester = f.requester._id.toString() === currentUserId.toString();
-    const friend = isRequester ? f.recipient : f.requester;
-
-    return {
-      _id: friend._id,
-      fullName: friend.fullName,
-      userName: friend.userName,
-      avatar: friend.avatar,
-      academicInfo: friend.academicInfo,
-      friendshipId: f._id,
-    };
+  }).populate({
+    path: "requester recipient",
+    select: "fullName userName avatar academicInfo userType institution",
+    populate: [
+      { path: "institution", select: "name" },
+      { path: "academicInfo.department", select: "name" },
+    ],
   });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { friends }, "Friends list fetched"));
+  // Format the response
+  const friends = friendships
+    .map((f) => {
+      // Safety check: if either user is deleted/null, skip this friendship
+      if (!f.requester || !f.recipient) return null;
+
+      const isRequester =
+        f.requester._id.toString() === currentUserId.toString();
+      const friend = isRequester ? f.recipient : f.requester;
+      return mapUserToResponse(friend, "accepted", f._id);
+    })
+    .filter(Boolean);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalCount: friends.length,
+        users: friends,
+      },
+      "Friends list fetched successfully"
+    )
+  );
 });
 
 // ==============================================================================
@@ -47,27 +79,94 @@ const getReceivedRequests = asyncHandler(async (req, res) => {
   const requests = await Friendship.find({
     recipient: currentUserId,
     status: FRIENDSHIP_STATUS.PENDING,
-  }).populate("requester", "fullName userName avatar");
+  }).populate({
+    path: "requester",
+    select: "fullName userName avatar academicInfo userType institution",
+    populate: [
+      { path: "institution", select: "name" },
+      { path: "academicInfo.department", select: "name" },
+    ],
+  });
 
-  const formattedRequests = requests.map((req) => ({
-    requestId: req._id,
-    requester: req.requester,
-    createdAt: req.createdAt,
-  }));
+  const formattedRequests = requests
+    .map((req) => {
+      // Safety check: if requester is deleted/null, skip this request
+      if (!req.requester) return null;
+      return mapUserToResponse(req.requester, "incoming_request", req._id);
+    })
+    .filter(Boolean);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { requests: formattedRequests },
-        "Received requests fetched"
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalCount: formattedRequests.length,
+        users: formattedRequests,
+      },
+      "Received requests fetched"
+    )
+  );
 });
 
 // ==============================================================================
-// 📤 3. ACTIONS
+// 📤 3. GET SENT FRIEND REQUESTS
+// ==============================================================================
+const getSentRequests = asyncHandler(async (req, res) => {
+  const currentUserId = req.user._id;
+
+  const requests = await Friendship.find({
+    requester: currentUserId,
+    status: FRIENDSHIP_STATUS.PENDING,
+  }).populate({
+    path: "recipient",
+    select: "fullName userName avatar academicInfo userType institution",
+    populate: [
+      { path: "institution", select: "name" },
+      { path: "academicInfo.department", select: "name" },
+    ],
+  });
+
+  const formattedRequests = requests
+    .map((req) => {
+      // Safety check: if recipient is deleted/null, skip this request
+      if (!req.recipient) return null;
+      return mapUserToResponse(req.recipient, "outgoing_request", req._id);
+    })
+    .filter(Boolean);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalCount: formattedRequests.length,
+        users: formattedRequests,
+      },
+      "Sent requests fetched"
+    )
+  );
+});
+
+// ==============================================================================
+// 💡 4. GET SUGGESTIONS
+// ==============================================================================
+const getSuggestions = asyncHandler(async (req, res) => {
+  // Temporary empty response as per user instruction
+  const formattedSuggestions = [];
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalCount: formattedSuggestions.length,
+        users: formattedSuggestions,
+      },
+      "Suggestions fetched"
+    )
+  );
+});
+
+// ==============================================================================
+// ⚡ ACTIONS
 // ==============================================================================
 
 // ACTION 1: SEND FRIEND REQUEST (auto follow)
@@ -248,10 +347,6 @@ const unfriendUser = asyncHandler(async (req, res) => {
     );
 });
 
-// ==============================================================================
-// 🚫 4. BLOCK/UNBLOCK
-// ==============================================================================
-
 // ACTION 6: BLOCK USER
 const blockUser = asyncHandler(async (req, res) => {
   const { userId: targetUserId } = req.params;
@@ -346,6 +441,8 @@ const unblockUser = asyncHandler(async (req, res) => {
 export {
   getFriendsList,
   getReceivedRequests,
+  getSentRequests,
+  getSuggestions,
   sendFriendRequest,
   acceptFriendRequest,
   rejectReceivedRequest,

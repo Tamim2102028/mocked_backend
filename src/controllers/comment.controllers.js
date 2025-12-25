@@ -111,6 +111,8 @@ const addComment = asyncHandler(async (req, res) => {
     stats: { likes: 0 },
     isMine: true,
     isLiked: false,
+    isEdited: false,
+    editedAt: null,
   };
 
   return res

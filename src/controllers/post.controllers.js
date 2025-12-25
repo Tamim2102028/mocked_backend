@@ -389,6 +389,8 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
       isMine: isOwnProfile,
       isRead: viewedPostIds.has(post._id.toString()),
     },
+    isEdited: post.isEdited || false,
+    editedAt: post.editedAt,
   }));
 
   // 5. Count Total Documents for Pagination

@@ -80,7 +80,7 @@ const getMyGroups = asyncHandler(async (req, res) => {
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
   })
     .sort({ createdAt: -1 }) // Sort by joined date (descending)
-    .select("group")
+    .select("group status")
     .skip(skip)
     .limit(Number(limit))
     .populate({

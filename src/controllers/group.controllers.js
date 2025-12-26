@@ -5,6 +5,9 @@ import { Group } from "../models/group.model.js";
 import { createGroupService } from "../services/group.service.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 
+import { GroupMembership } from "../models/groupMembership.model.js";
+import { GROUP_MEMBERSHIP_STATUS } from "../constants/index.js";
+
 // 1. CREATE GROUP
 const createGroup = asyncHandler(async (req, res) => {
   let { name, description, type, privacy, settings } = req.body;
@@ -64,9 +67,67 @@ const createGroup = asyncHandler(async (req, res) => {
 
 // 2. GET MY GROUPS
 const getMyGroups = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
+
+  // Find groups where the user is a member (JOINED)
+  const memberships = await GroupMembership.find({
+    user: req.user._id,
+    status: GROUP_MEMBERSHIP_STATUS.JOINED,
+  })
+    .sort({ createdAt: -1 }) // Sort by joined date (descending)
+    .select("group")
+    .skip(skip)
+    .limit(Number(limit))
+    .populate({
+      path: "group",
+      select:
+        "name slug description coverImage type privacy membersCount postsCount",
+    });
+
+  // Get total count for pagination
+  const totalDocs = await GroupMembership.countDocuments({
+    user: req.user._id,
+    status: GROUP_MEMBERSHIP_STATUS.JOINED,
+  });
+
+  const totalPages = Math.ceil(totalDocs / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  // Format the response
+  const groups = memberships.map((membership) => {
+    const group = membership.group;
+    return {
+      _id: group._id,
+      name: group.name,
+      slug: group.slug,
+      description: group.description,
+      coverImage: group.coverImage,
+      type: group.type,
+      privacy: group.privacy,
+      memberCount: group.membersCount,
+    };
+  });
+
+  const pagination = {
+    totalDocs,
+    limit: Number(limit),
+    page: Number(page),
+    totalPages,
+    hasNextPage,
+    hasPrevPage,
+  };
+
   return res
     .status(200)
-    .json(new ApiResponse(200, { groups: [] }, "My groups fetched"));
+    .json(
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "My groups fetched successfully"
+      )
+    );
 });
 
 // 3. GET UNIVERSITY GROUPS

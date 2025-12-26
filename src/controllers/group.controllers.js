@@ -107,6 +107,7 @@ const getMyGroups = asyncHandler(async (req, res) => {
       type: group.type,
       privacy: group.privacy,
       memberCount: group.membersCount,
+      status: membership.status,
     };
   });
 
@@ -154,7 +155,7 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
     );
     return {
       ...group,
-      myStatus: membership
+      status: membership
         ? membership.status
         : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
     };
@@ -212,7 +213,7 @@ const getCareerGroups = asyncHandler(async (req, res) => {
     );
     return {
       ...group,
-      myStatus: membership
+      status: membership
         ? membership.status
         : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
     };
@@ -271,7 +272,7 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
     );
     return {
       ...group,
-      myStatus: membership
+      status: membership
         ? membership.status
         : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
     };
@@ -331,7 +332,7 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
     const groupObj = m.group.toObject ? m.group.toObject() : m.group;
     return {
       ...groupObj,
-      myStatus: GROUP_MEMBERSHIP_STATUS.PENDING,
+      status: GROUP_MEMBERSHIP_STATUS.PENDING,
     };
   });
 

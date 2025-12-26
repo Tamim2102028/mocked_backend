@@ -428,20 +428,16 @@ const getGroupDetails = asyncHandler(async (req, res) => {
     ? membership.status
     : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
 
-  // Combine group data with status
-  const groupWithStatus = {
-    ...group,
+  // Metadata
+  const meta = {
     status,
-    // Add other computed fields if necessary
     isMember: status === GROUP_MEMBERSHIP_STATUS.JOINED,
     isAdmin: membership?.role === "ADMIN" || membership?.role === "OWNER",
   };
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, { group: groupWithStatus }, "Group details fetched")
-    );
+    .json(new ApiResponse(200, { group, meta }, "Group details fetched"));
 });
 
 // 9. GET GROUP FEED

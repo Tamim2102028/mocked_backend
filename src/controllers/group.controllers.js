@@ -64,9 +64,16 @@ const createGroup = asyncHandler(async (req, res) => {
     creatorId: req.user._id,
   });
 
+  // Creator is automatically the OWNER and JOINED
+  const meta = {
+    status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    isMember: true,
+    isAdmin: true, // Owner is admin
+  };
+
   return res
     .status(201)
-    .json(new ApiResponse(201, { group }, "Group created successfully"));
+    .json(new ApiResponse(201, { group, meta }, "Group created successfully"));
 });
 
 // 2. GET MY GROUPS
@@ -80,7 +87,7 @@ const getMyGroups = asyncHandler(async (req, res) => {
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
   })
     .sort({ createdAt: -1 }) // Sort by joined date (descending)
-    .select("group status")
+    .select("group status role")
     .skip(skip)
     .limit(Number(limit))
     .populate({
@@ -102,6 +109,9 @@ const getMyGroups = asyncHandler(async (req, res) => {
   // Format the response
   const groups = memberships.map((membership) => {
     const group = membership.group;
+    const status = membership.status;
+    const role = membership.role;
+
     return {
       group: {
         _id: group._id,
@@ -115,7 +125,9 @@ const getMyGroups = asyncHandler(async (req, res) => {
         postsCount: group.postsCount,
       },
       meta: {
-        status: membership.status,
+        status,
+        isMember: status === GROUP_MEMBERSHIP_STATUS.JOINED,
+        isAdmin: role === "ADMIN" || role === "OWNER",
       },
     };
   });
@@ -168,10 +180,16 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
       ? membership.status
       : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
 
+    const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
+    const isAdmin =
+      membership?.role === "ADMIN" || membership?.role === "OWNER";
+
     return {
       group,
       meta: {
         status,
+        isMember,
+        isAdmin,
       },
     };
   });
@@ -229,10 +247,17 @@ const getCareerGroups = asyncHandler(async (req, res) => {
     const status = membership
       ? membership.status
       : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
+
+    const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
+    const isAdmin =
+      membership?.role === "ADMIN" || membership?.role === "OWNER";
+
     return {
       group,
       meta: {
         status,
+        isMember,
+        isAdmin,
       },
     };
   });
@@ -297,6 +322,8 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
     group,
     meta: {
       status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      isMember: false,
+      isAdmin: false,
     },
   }));
 
@@ -356,6 +383,8 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
       group: groupObj,
       meta: {
         status: GROUP_MEMBERSHIP_STATUS.PENDING,
+        isMember: false,
+        isAdmin: false,
       },
     };
   });
@@ -410,6 +439,8 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
       group: groupObj,
       meta: {
         status: GROUP_MEMBERSHIP_STATUS.INVITED,
+        isMember: false,
+        isAdmin: false,
       },
     };
   });

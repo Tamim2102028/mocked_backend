@@ -20,11 +20,8 @@ const groupSchema = new Schema(
     },
     description: { type: String, trim: true, maxLength: 500 },
 
-    avatar: { type: String, default: "https://i.stack.imgur.com/l60Hf.png" },
-    coverImage: {
-      type: String,
-      default: "https://i.stack.imgur.com/l60Hf.png",
-    },
+    avatar: { type: String },
+    coverImage: { type: String },
 
     institution: {
       type: Schema.Types.ObjectId,
@@ -41,7 +38,6 @@ const groupSchema = new Schema(
     privacy: {
       type: String,
       enum: Object.values(GROUP_PRIVACY),
-      default: GROUP_PRIVACY.PUBLIC,
       index: true,
     },
 
@@ -54,6 +50,12 @@ const groupSchema = new Schema(
     postsCount: { type: Number, default: 0 },
 
     creator: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    owner: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,

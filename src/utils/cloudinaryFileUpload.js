@@ -7,6 +7,16 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const removeLocalFile = (localFilePath) => {
+  try {
+    if (localFilePath && fs.existsSync(localFilePath)) {
+      fs.unlinkSync(localFilePath);
+    }
+  } catch (error) {
+    console.error("Error removing local file:", error);
+  }
+};
+
 const uploadFile = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
@@ -17,25 +27,12 @@ const uploadFile = async (localFilePath) => {
     });
 
     // 2. File uploaded successfully, now remove local file
-    // (Sync ব্যবহার করছি কারণ এটা ব্লক করা জরুরি যাতে ক্লিনআপ নিশ্চিত হয়)
-    try {
-      if (fs.existsSync(localFilePath)) {
-        fs.unlinkSync(localFilePath);
-      }
-    } catch (cleanupError) {
-      console.error("Error removing local file after upload:", cleanupError);
-    }
+    removeLocalFile(localFilePath);
 
     return response;
   } catch (error) {
     // 3. Upload Failed? Still try to remove local file
-    try {
-      if (fs.existsSync(localFilePath)) {
-        fs.unlinkSync(localFilePath);
-      }
-    } catch (cleanupError) {
-      console.error("Error removing local file after failure:", cleanupError);
-    }
+    removeLocalFile(localFilePath);
 
     // null রিটার্ন করলে কন্ট্রোলার বুঝবে আপলোড হয়নি
     return null;

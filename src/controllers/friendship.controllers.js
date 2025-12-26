@@ -91,7 +91,7 @@ const getFriendsList = asyncHandler(async (req, res) => {
           hasPrevPage,
         },
       },
-      "Friends list fetched successfully"
+      "Friends list fetched"
     )
   );
 });

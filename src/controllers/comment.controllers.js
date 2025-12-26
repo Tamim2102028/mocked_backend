@@ -63,10 +63,12 @@ const getPostComments = asyncHandler(async (req, res) => {
       {
         comments: formattedComments,
         pagination: {
-          totalComments,
-          totalPages: Math.ceil(totalComments / limit),
-          currentPage: parseInt(page),
+          totalDocs: totalComments,
           limit: parseInt(limit),
+          page: parseInt(page),
+          totalPages: Math.ceil(totalComments / limit),
+          hasNextPage: parseInt(page) < Math.ceil(totalComments / limit),
+          hasPrevPage: parseInt(page) > 1,
         },
       },
       "Comments fetched successfully"

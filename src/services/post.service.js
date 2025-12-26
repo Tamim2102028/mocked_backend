@@ -347,13 +347,20 @@ export const getUserProfilePostsService = async (
 
   // Count total documents for pagination
   const totalDocs = await Post.countDocuments(visibilityQuery);
-  const hasNextPage = totalDocs > skip + posts.length;
+  const totalPages = Math.ceil(totalDocs / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
 
   return {
     posts: postsWithContext,
-    hasNextPage,
-    nextPage: hasNextPage ? page + 1 : null,
-    totalDocs,
+    pagination: {
+      totalDocs,
+      limit,
+      page,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
+    },
   };
 };
 

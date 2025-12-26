@@ -138,7 +138,27 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find({ type: GROUP_TYPES.OFFICIAL_INSTITUTION })
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
+
+  const groupIds = groups.map((g) => g._id);
+
+  const memberships = await GroupMembership.find({
+    user: req.user._id,
+    group: { $in: groupIds },
+  }).lean();
+
+  const groupsWithStatus = groups.map((group) => {
+    const membership = memberships.find(
+      (m) => m.group.toString() === group._id.toString()
+    );
+    return {
+      ...group,
+      myStatus: membership
+        ? membership.status
+        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+    };
+  });
 
   const totalDocs = await Group.countDocuments({
     type: GROUP_TYPES.OFFICIAL_INSTITUTION,
@@ -162,7 +182,7 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { groups, pagination },
+        { groups: groupsWithStatus, pagination },
         "University groups fetched successfully"
       )
     );
@@ -176,7 +196,27 @@ const getCareerGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find({ type: GROUP_TYPES.JOBS_CAREERS })
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
+
+  const groupIds = groups.map((g) => g._id);
+
+  const memberships = await GroupMembership.find({
+    user: req.user._id,
+    group: { $in: groupIds },
+  }).lean();
+
+  const groupsWithStatus = groups.map((group) => {
+    const membership = memberships.find(
+      (m) => m.group.toString() === group._id.toString()
+    );
+    return {
+      ...group,
+      myStatus: membership
+        ? membership.status
+        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+    };
+  });
 
   const totalDocs = await Group.countDocuments({
     type: GROUP_TYPES.JOBS_CAREERS,
@@ -200,7 +240,7 @@ const getCareerGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { groups, pagination },
+        { groups: groupsWithStatus, pagination },
         "Career groups fetched successfully"
       )
     );
@@ -215,7 +255,27 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find({ type: GROUP_TYPES.GENERAL })
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
+
+  const groupIds = groups.map((g) => g._id);
+
+  const memberships = await GroupMembership.find({
+    user: req.user._id,
+    group: { $in: groupIds },
+  }).lean();
+
+  const groupsWithStatus = groups.map((group) => {
+    const membership = memberships.find(
+      (m) => m.group.toString() === group._id.toString()
+    );
+    return {
+      ...group,
+      myStatus: membership
+        ? membership.status
+        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+    };
+  });
 
   const totalDocs = await Group.countDocuments({ type: GROUP_TYPES.GENERAL });
 
@@ -237,7 +297,7 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { groups, pagination },
+        { groups: groupsWithStatus, pagination },
         "Suggested groups fetched successfully"
       )
     );
@@ -267,7 +327,13 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
   const hasNextPage = page < totalPages;
   const hasPrevPage = page > 1;
 
-  const groups = memberships.map((m) => m.group);
+  const groups = memberships.map((m) => {
+    const groupObj = m.group.toObject ? m.group.toObject() : m.group;
+    return {
+      ...groupObj,
+      myStatus: GROUP_MEMBERSHIP_STATUS.PENDING,
+    };
+  });
 
   const pagination = {
     totalDocs,

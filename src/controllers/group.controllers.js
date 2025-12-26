@@ -6,7 +6,11 @@ import { createGroupService } from "../services/group.service.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 
 import { GroupMembership } from "../models/groupMembership.model.js";
-import { GROUP_MEMBERSHIP_STATUS, GROUP_TYPES } from "../constants/index.js";
+import {
+  GROUP_MEMBERSHIP_STATUS,
+  GROUP_TYPES,
+  GROUP_PRIVACY,
+} from "../constants/index.js";
 
 // 1. CREATE GROUP
 const createGroup = asyncHandler(async (req, res) => {
@@ -252,8 +256,11 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const skip = (page - 1) * limit;
 
-  // Assuming suggested groups are those of type GENERAL
-  const groups = await Group.find({ type: GROUP_TYPES.GENERAL })
+  // Assuming suggested groups are those of type GENERAL and not CLOSED
+  const groups = await Group.find({
+    type: GROUP_TYPES.GENERAL,
+    privacy: { $ne: GROUP_PRIVACY.CLOSED },
+  })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit))

@@ -103,15 +103,20 @@ const getMyGroups = asyncHandler(async (req, res) => {
   const groups = memberships.map((membership) => {
     const group = membership.group;
     return {
-      _id: group._id,
-      name: group.name,
-      slug: group.slug,
-      description: group.description,
-      coverImage: group.coverImage,
-      type: group.type,
-      privacy: group.privacy,
-      membersCount: group.membersCount,
-      status: membership.status,
+      group: {
+        _id: group._id,
+        name: group.name,
+        slug: group.slug,
+        description: group.description,
+        coverImage: group.coverImage,
+        type: group.type,
+        privacy: group.privacy,
+        membersCount: group.membersCount,
+        postsCount: group.postsCount,
+      },
+      meta: {
+        status: membership.status,
+      },
     };
   });
 
@@ -140,28 +145,34 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const skip = (page - 1) * limit;
 
-  const groups = await Group.find({ type: GROUP_TYPES.OFFICIAL_INSTITUTION })
+  const groupsData = await Group.find({
+    type: GROUP_TYPES.OFFICIAL_INSTITUTION,
+  })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit))
     .lean();
 
-  const groupIds = groups.map((g) => g._id);
+  const groupIds = groupsData.map((g) => g._id);
 
   const memberships = await GroupMembership.find({
     user: req.user._id,
     group: { $in: groupIds },
   }).lean();
 
-  const groupsWithStatus = groups.map((group) => {
+  const groups = groupsData.map((group) => {
     const membership = memberships.find(
       (m) => m.group.toString() === group._id.toString()
     );
+    const status = membership
+      ? membership.status
+      : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
+
     return {
-      ...group,
-      status: membership
-        ? membership.status
-        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      group,
+      meta: {
+        status,
+      },
     };
   });
 
@@ -187,7 +198,7 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { groups: groupsWithStatus, pagination },
+        { groups, pagination },
         "University groups fetched successfully"
       )
     );
@@ -198,28 +209,31 @@ const getCareerGroups = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const skip = (page - 1) * limit;
 
-  const groups = await Group.find({ type: GROUP_TYPES.JOBS_CAREERS })
+  const groupsData = await Group.find({ type: GROUP_TYPES.JOBS_CAREERS })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit))
     .lean();
 
-  const groupIds = groups.map((g) => g._id);
+  const groupIds = groupsData.map((g) => g._id);
 
   const memberships = await GroupMembership.find({
     user: req.user._id,
     group: { $in: groupIds },
   }).lean();
 
-  const groupsWithStatus = groups.map((group) => {
+  const groups = groupsData.map((group) => {
     const membership = memberships.find(
       (m) => m.group.toString() === group._id.toString()
     );
+    const status = membership
+      ? membership.status
+      : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
     return {
-      ...group,
-      status: membership
-        ? membership.status
-        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      group,
+      meta: {
+        status,
+      },
     };
   });
 
@@ -245,7 +259,7 @@ const getCareerGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { groups: groupsWithStatus, pagination },
+        { groups, pagination },
         "Career groups fetched successfully"
       )
     );
@@ -272,16 +286,18 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
     privacy: { $ne: GROUP_PRIVACY.CLOSED },
   };
 
-  const groups = await Group.find(query)
+  const groupsData = await Group.find(query)
     .sort({ membersCount: -1, createdAt: -1 }) // Sort by popularity then newness
     .skip(skip)
     .limit(Number(limit))
     .lean();
 
   // All returned groups are NOT_JOINED by definition
-  const groupsWithStatus = groups.map((group) => ({
-    ...group,
-    status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+  const groups = groupsData.map((group) => ({
+    group,
+    meta: {
+      status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+    },
   }));
 
   const totalDocs = await Group.countDocuments(query);
@@ -304,7 +320,7 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { groups: groupsWithStatus, pagination },
+        { groups, pagination },
         "Suggested groups fetched successfully"
       )
     );
@@ -337,8 +353,10 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
   const groups = memberships.map((m) => {
     const groupObj = m.group.toObject ? m.group.toObject() : m.group;
     return {
-      ...groupObj,
-      status: GROUP_MEMBERSHIP_STATUS.PENDING,
+      group: groupObj,
+      meta: {
+        status: GROUP_MEMBERSHIP_STATUS.PENDING,
+      },
     };
   });
 
@@ -386,7 +404,15 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
   const hasNextPage = page < totalPages;
   const hasPrevPage = page > 1;
 
-  const groups = memberships.map((m) => m.group);
+  const groups = memberships.map((m) => {
+    const groupObj = m.group.toObject ? m.group.toObject() : m.group;
+    return {
+      group: groupObj,
+      meta: {
+        status: GROUP_MEMBERSHIP_STATUS.INVITED,
+      },
+    };
+  });
 
   const pagination = {
     totalDocs,

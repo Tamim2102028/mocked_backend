@@ -412,31 +412,36 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
 const getGroupDetails = asyncHandler(async (req, res) => {
   const { slug } = req.params;
 
-  const group = await Group.findOne({ slug });
+  const group = await Group.findOne({ slug }).lean();
 
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
-  // Check Privacy: If PRIVATE or CLOSED, user must be a JOINED member
-  if (
-    group.privacy === GROUP_PRIVACY.PRIVATE ||
-    group.privacy === GROUP_PRIVACY.CLOSED
-  ) {
-    const membership = await GroupMembership.findOne({
-      group: group._id,
-      user: req.user._id,
-      status: GROUP_MEMBERSHIP_STATUS.JOINED,
-    });
+  // Get user's membership status
+  const membership = await GroupMembership.findOne({
+    group: group._id,
+    user: req.user._id,
+  }).lean();
 
-    if (!membership) {
-      throw new ApiError(403, "You do not have permission to view this group");
-    }
-  }
+  const status = membership
+    ? membership.status
+    : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
+
+  // Combine group data with status
+  const groupWithStatus = {
+    ...group,
+    status,
+    // Add other computed fields if necessary
+    isMember: status === GROUP_MEMBERSHIP_STATUS.JOINED,
+    isAdmin: membership?.role === "ADMIN" || membership?.role === "OWNER",
+  };
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { group }, "Group details fetched"));
+    .json(
+      new ApiResponse(200, { group: groupWithStatus }, "Group details fetched")
+    );
 });
 
 // 9. GET GROUP FEED

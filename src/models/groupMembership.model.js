@@ -5,7 +5,6 @@ import {
   GROUP_MEMBERSHIP_STATUS,
   GROUP_JOIN_METHOD,
 } from "../constants/index.js";
-import { Group } from "./group.model.js";
 
 const groupMembershipSchema = new Schema(
   {
@@ -33,7 +32,7 @@ const groupMembershipSchema = new Schema(
     status: {
       type: String,
       enum: Object.values(GROUP_MEMBERSHIP_STATUS),
-      default: GROUP_MEMBERSHIP_STATUS.JOINED,
+      default: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
       index: true,
     },
 
@@ -55,23 +54,6 @@ const groupMembershipSchema = new Schema(
 groupMembershipSchema.index({ group: 1, user: 1 }, { unique: true });
 groupMembershipSchema.index({ group: 1, status: 1 });
 groupMembershipSchema.index({ user: 1, status: 1 });
-
-// --- Hooks ---
-groupMembershipSchema.post("save", async function (doc) {
-  if (doc.status === GROUP_MEMBERSHIP_STATUS.JOINED) {
-    await Group.findByIdAndUpdate(doc.group, {
-      $inc: { membersCount: 1 },
-    });
-  }
-});
-
-groupMembershipSchema.post("findOneAndDelete", async function (doc) {
-  if (doc && doc.status === GROUP_MEMBERSHIP_STATUS.JOINED) {
-    await Group.findByIdAndUpdate(doc.group, {
-      $inc: { membersCount: -1 },
-    });
-  }
-});
 
 export const GroupMembership = mongoose.model(
   "GroupMembership",

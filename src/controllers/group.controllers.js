@@ -110,7 +110,7 @@ const getMyGroups = asyncHandler(async (req, res) => {
       coverImage: group.coverImage,
       type: group.type,
       privacy: group.privacy,
-      memberCount: group.membersCount,
+      membersCount: group.membersCount,
       status: membership.status,
     };
   });
@@ -256,36 +256,35 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const skip = (page - 1) * limit;
 
-  // Assuming suggested groups are those of type GENERAL and not CLOSED
-  const groups = await Group.find({
-    type: GROUP_TYPES.GENERAL,
+  // 1. Find all groups the user has ANY relationship with (Joined, Pending, Invited, etc.)
+  const userMemberships = await GroupMembership.find({
+    user: req.user._id,
+  }).select("group");
+
+  const excludedGroupIds = userMemberships.map((m) => m.group);
+
+  // 2. Query groups:
+  //    - Exclude groups user is already related to
+  //    - Exclude CLOSED groups
+  //    - (Optional) You can add more logic here (e.g., popularity, interests)
+  const query = {
+    _id: { $nin: excludedGroupIds },
     privacy: { $ne: GROUP_PRIVACY.CLOSED },
-  })
-    .sort({ createdAt: -1 })
+  };
+
+  const groups = await Group.find(query)
+    .sort({ membersCount: -1, createdAt: -1 }) // Sort by popularity then newness
     .skip(skip)
     .limit(Number(limit))
     .lean();
 
-  const groupIds = groups.map((g) => g._id);
+  // All returned groups are NOT_JOINED by definition
+  const groupsWithStatus = groups.map((group) => ({
+    ...group,
+    status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+  }));
 
-  const memberships = await GroupMembership.find({
-    user: req.user._id,
-    group: { $in: groupIds },
-  }).lean();
-
-  const groupsWithStatus = groups.map((group) => {
-    const membership = memberships.find(
-      (m) => m.group.toString() === group._id.toString()
-    );
-    return {
-      ...group,
-      status: membership
-        ? membership.status
-        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
-    };
-  });
-
-  const totalDocs = await Group.countDocuments({ type: GROUP_TYPES.GENERAL });
+  const totalDocs = await Group.countDocuments(query);
 
   const totalPages = Math.ceil(totalDocs / limit);
   const hasNextPage = page < totalPages;

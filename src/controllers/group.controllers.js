@@ -418,6 +418,23 @@ const getGroupDetails = asyncHandler(async (req, res) => {
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
+
+  // Check Privacy: If PRIVATE or CLOSED, user must be a JOINED member
+  if (
+    group.privacy === GROUP_PRIVACY.PRIVATE ||
+    group.privacy === GROUP_PRIVACY.CLOSED
+  ) {
+    const membership = await GroupMembership.findOne({
+      group: group._id,
+      user: req.user._id,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+
+    if (!membership) {
+      throw new ApiError(403, "You do not have permission to view this group");
+    }
+  }
+
   return res
     .status(200)
     .json(new ApiResponse(200, { group }, "Group details fetched"));

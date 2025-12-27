@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const postReadSchema = new Schema(
+const readPostSchema = new Schema(
   {
     // ১. কোন পোস্ট?
     post: {
@@ -22,6 +22,6 @@ const postReadSchema = new Schema(
 );
 
 // 🔥 ইউনিক ইনডেক্স: একজন ইউজার একটা পোস্টের জন্য একবারই এন্ট্রি পাবে
-postReadSchema.index({ post: 1, user: 1 }, { unique: true });
+readPostSchema.index({ post: 1, user: 1 }, { unique: true });
 
-export const PostRead = mongoose.model("PostRead", postReadSchema);
+export const ReadPost = mongoose.model("ReadPost", readPostSchema);

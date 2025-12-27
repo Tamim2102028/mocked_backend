@@ -1,6 +1,6 @@
 import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
-import { PostRead } from "../models/postRead.model.js";
+import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import {
@@ -102,7 +102,7 @@ export const getUserProfilePostsService = async (
 
   if (currentUserId && posts.length > 0) {
     // Fetch read status
-    const viewedPosts = await PostRead.find({
+    const viewedPosts = await ReadPost.find({
       user: currentUserId,
       post: { $in: postIds },
     }).select("post");

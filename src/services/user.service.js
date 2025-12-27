@@ -2,7 +2,6 @@ import { User } from "../models/user.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import { Follow } from "../models/follow.model.js";
 import { Post } from "../models/post.model.js";
-import { PostRead } from "../models/postRead.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 import { findInstitutionByEmailDomain } from "./academic.service.js";

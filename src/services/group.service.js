@@ -12,7 +12,7 @@ import {
 import { ApiError } from "../utils/ApiError.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 import { Post } from "../models/post.model.js";
-import { PostRead } from "../models/postRead.model.js";
+import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { createPostService } from "./post.service.js";
 
@@ -861,7 +861,7 @@ const getGroupFeedService = async (slug, userId, page = 1, limit = 10) => {
   const postIds = posts.map((p) => p._id);
 
   if (userId && posts.length > 0) {
-    const viewedPosts = await PostRead.find({
+    const viewedPosts = await ReadPost.find({
       user: userId,
       post: { $in: postIds },
     }).select("post");

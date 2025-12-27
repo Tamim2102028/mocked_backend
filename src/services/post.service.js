@@ -4,7 +4,7 @@
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
-import { PostRead } from "../models/postRead.model.js";
+import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import {
@@ -83,7 +83,7 @@ export const createPostService = async (postData, authorId) => {
   );
 
   // Mark as read for author
-  await PostRead.create({
+  await ReadPost.create({
     post: post._id,
     user: authorId,
   });
@@ -146,7 +146,7 @@ export const toggleLikePostService = async (postId, userId) => {
 // === Toggle Mark as Read Service ===
 export const toggleMarkAsReadService = async (postId, userId) => {
   // Check if already read
-  const existingRead = await PostRead.findOne({
+  const existingRead = await ReadPost.findOne({
     post: postId,
     user: userId,
   });
@@ -160,7 +160,7 @@ export const toggleMarkAsReadService = async (postId, userId) => {
     };
   } else {
     // Mark as read
-    await PostRead.create({
+    await ReadPost.create({
       post: postId,
       user: userId,
     });

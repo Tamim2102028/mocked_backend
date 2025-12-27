@@ -1,7 +1,6 @@
 import { Institution } from "../models/institution.model.js";
 import { Post } from "../models/post.model.js";
 import { Reaction } from "../models/reaction.model.js";
-import { PostRead } from "../models/postRead.model.js";
 import {
   POST_TARGET_MODELS,
   REACTION_TARGET_MODELS,

@@ -92,8 +92,11 @@ export const addCommentService = async (postId, content, userId) => {
 export const deleteCommentService = async (commentId, userId) => {
   const comment = await Comment.findById(commentId);
 
-  if (!comment || comment.isDeleted) {
+  if (!comment) {
     throw new ApiError(404, "Comment not found");
+  }
+  if (comment.isDeleted) {
+    throw new ApiError(404, "Comment already deleted");
   }
 
   // চেক করা যে ইউজার নিজের কমেন্ট ডিলিট করছে কিনা
@@ -120,8 +123,11 @@ export const deleteCommentService = async (commentId, userId) => {
 export const updateCommentService = async (commentId, content, userId) => {
   const comment = await Comment.findById(commentId);
 
-  if (!comment || comment.isDeleted) {
+  if (!comment) {
     throw new ApiError(404, "Comment not found");
+  }
+  if (comment.isDeleted) {
+    throw new ApiError(404, "Comment already deleted");
   }
 
   if (comment.author.toString() !== userId.toString()) {
@@ -158,6 +164,9 @@ export const toggleCommentLikeService = async (commentId, userId) => {
   const comment = await Comment.findById(commentId);
   if (!comment) {
     throw new ApiError(404, "Comment not found");
+  }
+  if (comment.isDeleted) {
+    throw new ApiError(404, "Comment already deleted");
   }
 
   const existingReaction = await Reaction.findOne({

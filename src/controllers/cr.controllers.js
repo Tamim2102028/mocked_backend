@@ -2,7 +2,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
-import { getCrFeedService } from "../services/academic.service.js";
 import {
   createPostService,
   toggleLikePostService,

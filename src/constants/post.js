@@ -6,6 +6,7 @@ export const POST_TYPES = {
   POLL: "POLL",
   QUESTION: "QUESTION",
   ASSIGNMENT: "ASSIGNMENT", // ✅ Added
+  VIDEO: "VIDEO", // ✅ Added
 };
 
 export const ATTACHMENT_TYPES = {

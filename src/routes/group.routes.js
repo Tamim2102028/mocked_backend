@@ -60,17 +60,17 @@ router.post("/:slug/reject", rejectJoinRequest);
 
 // Group Details page Routes
 router.get("/:slug", getGroupDetails);
-router.get("/:groupId/members", getGroupMembers);
+router.get("/:slug/members", getGroupMembers);
 router.get("/:slug/feed", getGroupFeed);
 
 // Group Details page Action Routes
 router.post("/:slug/post", createGroupPost);
-router.delete("/:groupId/leave", leaveGroup);
+router.delete("/:slug/leave", leaveGroup);
 
 // Admin Action Routes
-router.delete("/:groupId/members/:userId", removeMember);
-router.patch("/:groupId/members/:userId/assign-admin", assignAdmin);
-router.patch("/:groupId/members/:userId/revoke-admin", revokeAdmin);
+router.delete("/:slug/members/:userId", removeMember);
+router.patch("/:slug/members/:userId/assign-admin", assignAdmin);
+router.patch("/:slug/members/:userId/revoke-admin", revokeAdmin);
 
 // ==========================================
 // 🚀 POST & COMMENT ACTIONS

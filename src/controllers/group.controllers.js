@@ -147,8 +147,8 @@ const joinGroup = asyncHandler(async (req, res) => {
 // 🚀 9. LEAVE GROUP
 // ==========================================
 const leaveGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-  const { status } = await leaveGroupService(groupId, req.user._id);
+  const { slug } = req.params;
+  const { status } = await leaveGroupService(slug, req.user._id);
 
   return res
     .status(200)
@@ -219,9 +219,9 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 // 🚀 14. GET GROUP MEMBERS
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const { members, pagination } = await getGroupMembersService(
-    groupId,
+    slug,
     req.user._id
   );
 
@@ -240,9 +240,8 @@ const getGroupMembers = asyncHandler(async (req, res) => {
 // 🚀 15. REMOVE MEMBER (Admin Only)
 // ==========================================
 const removeMember = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
-  // Correct Order: (groupId, memberId, adminId)
-  const { memberId } = await removeMemberService(groupId, userId, req.user._id);
+  const { slug, userId } = req.params;
+  const { memberId } = await removeMemberService(slug, userId, req.user._id);
 
   return res
     .status(200)
@@ -253,9 +252,8 @@ const removeMember = asyncHandler(async (req, res) => {
 // 🚀 16. ASSIGN ADMIN (Owner/Admin Only)
 // ==========================================
 const assignAdmin = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
-  // Correct Order: (groupId, memberId, ownerId)
-  const { role } = await assignAdminService(groupId, userId, req.user._id);
+  const { slug, userId } = req.params;
+  const { role } = await assignAdminService(slug, userId, req.user._id);
 
   return res
     .status(200)
@@ -266,9 +264,8 @@ const assignAdmin = asyncHandler(async (req, res) => {
 // 🚀 17. REVOKE ADMIN (Owner Only)
 // ==========================================
 const revokeAdmin = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
-  // Correct Order: (groupId, memberId, ownerId)
-  const { role } = await revokeAdminService(groupId, userId, req.user._id);
+  const { slug, userId } = req.params;
+  const { role } = await revokeAdminService(slug, userId, req.user._id);
 
   return res
     .status(200)

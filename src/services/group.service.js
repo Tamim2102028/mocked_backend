@@ -134,12 +134,14 @@ const createGroupService = async ({
 };
 
 // === Leave Group Service ===
-const leaveGroupService = async (groupId, userId) => {
+const leaveGroupService = async (slug, userId) => {
   // 1. Check if group exists
-  const group = await Group.findById(groupId);
+  const group = await Group.findOne({ slug });
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
+
+  const groupId = group._id;
 
   // 2. Check membership
   const membership = await GroupMembership.findOne({
@@ -163,10 +165,12 @@ const leaveGroupService = async (groupId, userId) => {
   // If Admin leaves, they lose admin rights automatically as membership is gone
   await GroupMembership.findByIdAndDelete(membership._id);
 
-  // 5. Decrement member count
-  await Group.findByIdAndUpdate(groupId, {
-    $inc: { membersCount: -1 },
-  });
+  // 5. Decrement member count only if they were a joined member
+  if (membership.status === GROUP_MEMBERSHIP_STATUS.JOINED) {
+    await Group.findByIdAndUpdate(groupId, {
+      $inc: { membersCount: -1 },
+    });
+  }
 
   return {
     status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
@@ -328,10 +332,12 @@ const rejectJoinRequestService = async (slug, adminId, targetUserId) => {
   return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
 };
 
-const removeMemberService = async (groupId, memberId, adminId) => {
+const removeMemberService = async (slug, memberId, adminId) => {
   // 1. Validate Group
-  const group = await Group.findById(groupId);
+  const group = await Group.findOne({ slug });
   if (!group) throw new ApiError(404, "Group not found");
+
+  const groupId = group._id;
 
   // 2. Validate Admin Permissions
   const adminMembership = await GroupMembership.findOne({
@@ -370,8 +376,14 @@ const removeMemberService = async (groupId, memberId, adminId) => {
   return { memberId };
 };
 
-const assignAdminService = async (groupId, memberId, ownerId) => {
-  // 1. Verify Owner
+const assignAdminService = async (slug, memberId, ownerId) => {
+  // 1. Verify Group
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const groupId = group._id;
+
+  // 2. Verify Owner
   const ownerMembership = await GroupMembership.findOne({
     group: groupId,
     user: ownerId,

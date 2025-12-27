@@ -6,6 +6,7 @@ import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
 import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
+import { Comment } from "../models/comment.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import {
   POST_TARGET_MODELS,
@@ -109,7 +110,9 @@ export const toggleLikePostService = async (postId, userId) => {
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
-
+  if (post.isDeleted) {
+    throw new ApiError(404, "Post is deleted");
+  }
   // Check if already liked
   const existingReaction = await Reaction.findOne({
     targetId: postId,
@@ -178,15 +181,42 @@ export const deletePostService = async (postId, userId) => {
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
+  if (post.isDeleted) {
+    throw new ApiError(404, "Post is already deleted");
+  }
 
   // Check authorization
   if (post.author.toString() !== userId.toString()) {
     throw new ApiError(403, "You are not authorized to delete this post");
   }
 
-  // Soft delete
+  // Soft delete post
   post.isDeleted = true;
   await post.save();
+
+  // 1. Soft delete all comments of this post
+  const comments = await Comment.find({ post: postId });
+  const commentIds = comments.map((c) => c._id);
+
+  if (commentIds.length > 0) {
+    // Soft delete comments
+    await Comment.updateMany(
+      { _id: { $in: commentIds } },
+      { $set: { isDeleted: true } }
+    );
+
+    // 2. Delete reactions on these comments
+    await Reaction.deleteMany({
+      targetId: { $in: commentIds },
+      targetModel: REACTION_TARGET_MODELS.COMMENT,
+    });
+  }
+
+  // 3. Delete reactions on the post itself
+  await Reaction.deleteMany({
+    targetId: postId,
+    targetModel: REACTION_TARGET_MODELS.POST,
+  });
 
   return { postId };
 };

@@ -85,7 +85,7 @@ const postSchema = new Schema(
     commentsCount: { type: Number, default: 0 },
     sharesCount: { type: Number, default: 0 },
 
-    // edited status
+    // Edited status
     isEdited: { type: Boolean, default: false },
     editedAt: { type: Date },
 

@@ -3,7 +3,6 @@ import mongoose, { Schema } from "mongoose";
 const commentSchema = new Schema(
   {
     content: { type: String, required: true, trim: true, maxLength: 1000 },
-    attachment: { type: String },
     post: {
       type: Schema.Types.ObjectId,
       ref: "Post",

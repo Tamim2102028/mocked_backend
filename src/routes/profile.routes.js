@@ -12,11 +12,17 @@ import {
   deleteProfilePostComment,
   updateProfilePostComment,
   toggleProfilePostCommentLike,
+  toggleProfileFollow,
 } from "../controllers/profile.controllers.js";
 
 const router = Router();
 
 router.use(verifyJWT);
+
+// ==========================================
+// 🚀 PROFILE ACTIONS
+// ==========================================
+router.post("/:userId/follow", toggleProfileFollow);
 
 // ==========================================
 // 🚀 PROFILE POSTS ROUTES

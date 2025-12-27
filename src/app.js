@@ -35,7 +35,6 @@ import deptRouter from "./routes/dept.routes.js";
 import roomRouter from "./routes/room.routes.js";
 import institutionRouter from "./routes/institution.routes.js";
 import friendshipRouter from "./routes/friendship.routes.js";
-import followRouter from "./routes/follow.routes.js";
 import profileRouter from "./routes/profile.routes.js";
 
 app.use("/api/v1/users", userRouter);
@@ -46,7 +45,6 @@ app.use("/api/v1/depts", deptRouter);
 app.use("/api/v1/rooms", roomRouter);
 app.use("/api/v1/institutions", institutionRouter);
 app.use("/api/v1/friendships", friendshipRouter);
-app.use("/api/v1/follows", followRouter);
 
 // ⚠️ সবার শেষে এটা বসাতে হবে
 app.use(errorHandler);

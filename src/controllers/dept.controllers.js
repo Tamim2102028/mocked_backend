@@ -17,6 +17,8 @@ import {
   updateCommentService,
   toggleCommentLikeService,
 } from "../services/comment.service.js";
+import { toggleFollowService } from "../services/follow.service.js";
+import { FOLLOW_TARGET_MODELS } from "../constants/index.js";
 
 // 🚀 1. GET DEPT FEED
 const getDeptFeed = asyncHandler(async (req, res) => {
@@ -216,6 +218,27 @@ const toggleDeptPostCommentLike = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, "Comment like toggled"));
 });
 
+// 🚀 TOGGLE FOLLOW DEPT
+const toggleDeptFollow = asyncHandler(async (req, res) => {
+  const { deptId } = req.params;
+
+  const { isFollowing } = await toggleFollowService(
+    deptId,
+    FOLLOW_TARGET_MODELS.DEPARTMENT,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isFollowing },
+        isFollowing ? "Followed department" : "Unfollowed department"
+      )
+    );
+});
+
 export {
   getDeptFeed,
   createDeptPost,
@@ -230,4 +253,5 @@ export {
   deleteDeptPostComment,
   updateDeptPostComment,
   toggleDeptPostCommentLike,
+  toggleDeptFollow,
 };

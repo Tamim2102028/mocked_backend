@@ -1,6 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
+import {
+  POST_TARGET_MODELS,
+  POST_TYPES,
+  FOLLOW_TARGET_MODELS,
+} from "../constants/index.js";
+import { toggleFollowService } from "../services/follow.service.js";
 import mongoose from "mongoose";
 
 const _objectId = () => new mongoose.Types.ObjectId().toString();
@@ -127,4 +132,31 @@ const getDepartmentsList = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { departments }, "Departments list fetched"));
 });
 
-export { getInstitutionFeed, createInstitutionPost, getInstitutionDetails, getDepartmentsList };
+// 🚀 TOGGLE FOLLOW INSTITUTION
+const toggleInstitutionFollow = asyncHandler(async (req, res) => {
+  const { instId } = req.params;
+
+  const { isFollowing } = await toggleFollowService(
+    instId,
+    FOLLOW_TARGET_MODELS.INSTITUTION,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isFollowing },
+        isFollowing ? "Followed institution" : "Unfollowed institution"
+      )
+    );
+});
+
+export {
+  getInstitutionFeed,
+  createInstitutionPost,
+  getInstitutionDetails,
+  getDepartmentsList,
+  toggleInstitutionFollow,
+};

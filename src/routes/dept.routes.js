@@ -14,11 +14,13 @@ import {
   deleteDeptPostComment,
   updateDeptPostComment,
   toggleDeptPostCommentLike,
+  toggleDeptFollow,
 } from "../controllers/dept.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);
 
+router.post("/:deptId/follow", toggleDeptFollow);
 router.get("/:deptId", getDeptDetails);
 router.get("/:deptId/feed", getDeptFeed);
 router.get("/:deptId/teachers", getTeachers);

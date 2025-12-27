@@ -16,6 +16,8 @@ import {
   updateCommentService,
   toggleCommentLikeService,
 } from "../services/comment.service.js";
+import { toggleFollowService } from "../services/follow.service.js";
+import { FOLLOW_TARGET_MODELS } from "../constants/index.js";
 
 // =========================
 // 🚀 GET USER PROFILE POSTS (By Username)
@@ -232,6 +234,29 @@ const toggleProfilePostCommentLike = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { isLiked }, "Comment like toggled"));
 });
 
+// =========================
+// 🚀 TOGGLE FOLLOW USER
+// =========================
+const toggleProfileFollow = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  const { isFollowing } = await toggleFollowService(
+    userId,
+    FOLLOW_TARGET_MODELS.USER,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isFollowing },
+        isFollowing ? "Followed successfully" : "Unfollowed successfully"
+      )
+    );
+});
+
 export {
   getUserProfilePosts,
   createProfilePost,
@@ -244,4 +269,5 @@ export {
   deleteProfilePostComment,
   updateProfilePostComment,
   toggleProfilePostCommentLike,
+  toggleProfileFollow,
 };

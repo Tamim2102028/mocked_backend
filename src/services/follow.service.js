@@ -1,21 +1,23 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { ApiError } from "../utils/ApiError.js";
 import { Follow } from "../models/follow.model.js";
 import { User } from "../models/user.model.js";
 import { Institution } from "../models/institution.model.js";
 import { Department } from "../models/department.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import { FOLLOW_TARGET_MODELS, FRIENDSHIP_STATUS } from "../constants/index.js";
+import { ApiError } from "../utils/ApiError.js";
 
-// ==============================================================================
-// 1. GENERALIZED FOLLOW (User, Page, Institution, Department)
-// ==============================================================================
-const toggleFollow = asyncHandler(async (req, res) => {
-  const { targetId } = req.params;
-  const { targetModel = FOLLOW_TARGET_MODELS.USER } = req.body; // Default to User
-  const currentUserId = req.user._id;
-
+/**
+ * Toggle follow status for a target (User, Institution, Department, etc.)
+ * @param {string} targetId - ID of the target to follow/unfollow
+ * @param {string} targetModel - Model type of the target
+ * @param {string} currentUserId - ID of the user performing the action
+ * @returns {Promise<Object>} - { isFollowing: boolean }
+ */
+export const toggleFollowService = async (
+  targetId,
+  targetModel,
+  currentUserId
+) => {
   // 1. Validate Target Model
   if (!Object.values(FOLLOW_TARGET_MODELS).includes(targetModel)) {
     throw new ApiError(400, "Invalid target model");
@@ -84,15 +86,7 @@ const toggleFollow = asyncHandler(async (req, res) => {
   if (existingFollow) {
     // UNFOLLOW
     await Follow.findByIdAndDelete(existingFollow._id);
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { isFollowing: false },
-          `Unfollowed ${targetModel} successfully`
-        )
-      );
+    return { isFollowing: false };
   } else {
     // FOLLOW
     await Follow.create({
@@ -100,16 +94,6 @@ const toggleFollow = asyncHandler(async (req, res) => {
       following: targetId,
       followingModel: targetModel,
     });
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { isFollowing: true },
-          `Followed ${targetModel} successfully`
-        )
-      );
+    return { isFollowing: true };
   }
-});
-
-export { toggleFollow };
+};

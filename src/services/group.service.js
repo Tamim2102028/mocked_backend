@@ -251,19 +251,16 @@ const cancelJoinRequestService = async (slug, userId) => {
   return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
 };
 
-const acceptJoinRequestService = async (requestId, adminId) => {
-  // 1. Find Request
-  const membership = await GroupMembership.findById(requestId).populate(
-    "group",
-    "membersCount"
-  );
-  if (!membership) {
-    throw new ApiError(404, "Join request not found");
+const acceptJoinRequestService = async (slug, adminId, targetUserId) => {
+  // 1. Find Group
+  const group = await Group.findOne({ slug });
+  if (!group) {
+    throw new ApiError(404, "Group not found");
   }
 
   // 2. Validate Admin Permissions
   const adminMembership = await GroupMembership.findOne({
-    group: membership.group._id,
+    group: group._id,
     user: adminId,
     role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
   });
@@ -272,33 +269,40 @@ const acceptJoinRequestService = async (requestId, adminId) => {
     throw new ApiError(403, "You do not have permission to accept requests");
   }
 
-  if (membership.status !== GROUP_MEMBERSHIP_STATUS.PENDING) {
-    throw new ApiError(400, "This request is not pending");
+  // 3. Find Request
+  const membership = await GroupMembership.findOne({
+    group: group._id,
+    user: targetUserId,
+    status: GROUP_MEMBERSHIP_STATUS.PENDING,
+  });
+
+  if (!membership) {
+    throw new ApiError(404, "Join request not found or not pending");
   }
 
-  // 3. Accept Request
+  // 4. Accept Request
   membership.status = GROUP_MEMBERSHIP_STATUS.JOINED;
   membership.joinedAt = new Date();
   await membership.save();
 
-  // 4. Update Group Count
-  await Group.findByIdAndUpdate(membership.group._id, {
+  // 5. Update Group Count
+  await Group.findByIdAndUpdate(group._id, {
     $inc: { membersCount: 1 },
   });
 
   return { status: GROUP_MEMBERSHIP_STATUS.JOINED };
 };
 
-const rejectJoinRequestService = async (requestId, adminId) => {
-  // 1. Find Request
-  const membership = await GroupMembership.findById(requestId);
-  if (!membership) {
-    throw new ApiError(404, "Join request not found");
+const rejectJoinRequestService = async (slug, adminId, targetUserId) => {
+  // 1. Find Group
+  const group = await Group.findOne({ slug });
+  if (!group) {
+    throw new ApiError(404, "Group not found");
   }
 
   // 2. Validate Admin Permissions
   const adminMembership = await GroupMembership.findOne({
-    group: membership.group,
+    group: group._id,
     user: adminId,
     role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
   });
@@ -307,12 +311,19 @@ const rejectJoinRequestService = async (requestId, adminId) => {
     throw new ApiError(403, "You do not have permission to reject requests");
   }
 
-  if (membership.status !== GROUP_MEMBERSHIP_STATUS.PENDING) {
-    throw new ApiError(400, "This request is not pending");
+  // 3. Find Request
+  const membership = await GroupMembership.findOne({
+    group: group._id,
+    user: targetUserId,
+    status: GROUP_MEMBERSHIP_STATUS.PENDING,
+  });
+
+  if (!membership) {
+    throw new ApiError(404, "Join request not found or not pending");
   }
 
-  // 3. Reject (Delete) Request
-  await GroupMembership.findByIdAndDelete(requestId);
+  // 4. Reject (Delete) Request
+  await GroupMembership.findByIdAndDelete(membership._id);
 
   return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
 };

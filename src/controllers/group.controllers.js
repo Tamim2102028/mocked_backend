@@ -43,7 +43,7 @@ const createGroup = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
-  const result = await createGroupService(
+  const { group, meta } = await createGroupService(
     req.body,
     req.user._id,
     avatarLocalPath,
@@ -52,7 +52,7 @@ const createGroup = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(201, result, "Group created successfully"));
+    .json(new ApiResponse(201, { group, meta }, "Group created successfully"));
 });
 
 // ==========================================
@@ -118,11 +118,17 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
 // 🚀 7. GET INVITED GROUPS
 // ==========================================
 const getInvitedGroups = asyncHandler(async (req, res) => {
-  const groups = await getInvitedGroupsService(req.user._id);
+  const { groups, pagination } = await getInvitedGroupsService(req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, groups, "Invited groups fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "Invited groups fetched successfully"
+      )
+    );
 });
 
 // ==========================================
@@ -130,11 +136,11 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
 // ==========================================
 const joinGroup = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const result = await joinGroupService(slug, req.user._id);
+  const { status } = await joinGroupService(slug, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Join request sent successfully"));
+    .json(new ApiResponse(200, { status }, "Join request sent successfully"));
 });
 
 // ==========================================
@@ -142,11 +148,11 @@ const joinGroup = asyncHandler(async (req, res) => {
 // ==========================================
 const leaveGroup = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const result = await leaveGroupService(groupId, req.user._id);
+  const { status } = await leaveGroupService(groupId, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Left group successfully"));
+    .json(new ApiResponse(200, { status }, "Left group successfully"));
 });
 
 // ==========================================
@@ -154,11 +160,13 @@ const leaveGroup = asyncHandler(async (req, res) => {
 // ==========================================
 const cancelJoinRequest = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const result = await cancelJoinRequestService(slug, req.user._id);
+  const { status } = await cancelJoinRequestService(slug, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Join request cancelled successfully"));
+    .json(
+      new ApiResponse(200, { status }, "Join request cancelled successfully")
+    );
 });
 
 // ==========================================
@@ -168,11 +176,11 @@ const acceptJoinRequest = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const { userId } = req.body;
 
-  const result = await acceptJoinRequestService(slug, req.user._id, userId);
+  const { status } = await acceptJoinRequestService(slug, req.user._id, userId);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "User request accepted"));
+    .json(new ApiResponse(200, { status }, "User request accepted"));
 });
 
 // ==========================================
@@ -182,11 +190,11 @@ const rejectJoinRequest = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const { userId } = req.body;
 
-  const result = await rejectJoinRequestService(slug, req.user._id, userId);
+  const { status } = await rejectJoinRequestService(slug, req.user._id, userId);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "User request rejected"));
+    .json(new ApiResponse(200, { status }, "User request rejected"));
 });
 
 // ==========================================
@@ -194,11 +202,17 @@ const rejectJoinRequest = asyncHandler(async (req, res) => {
 // ==========================================
 const getGroupDetails = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const result = await getGroupDetailsService(slug, req.user._id);
+  const { group, meta } = await getGroupDetailsService(slug, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Group details fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { group, meta },
+        "Group details fetched successfully"
+      )
+    );
 });
 
 // ==========================================
@@ -206,11 +220,20 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const result = await getGroupMembersService(groupId, req.user._id);
+  const { members, pagination } = await getGroupMembersService(
+    groupId,
+    req.user._id
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Group members fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { members, pagination },
+        "Group members fetched successfully"
+      )
+    );
 });
 
 // ==========================================
@@ -218,11 +241,12 @@ const getGroupMembers = asyncHandler(async (req, res) => {
 // ==========================================
 const removeMember = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const result = await removeMemberService(groupId, req.user._id, userId);
+  // Correct Order: (groupId, memberId, adminId)
+  const { memberId } = await removeMemberService(groupId, userId, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Member removed successfully"));
+    .json(new ApiResponse(200, { memberId }, "Member removed successfully"));
 });
 
 // ==========================================
@@ -230,11 +254,12 @@ const removeMember = asyncHandler(async (req, res) => {
 // ==========================================
 const assignAdmin = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const result = await assignAdminService(groupId, req.user._id, userId);
+  // Correct Order: (groupId, memberId, ownerId)
+  const { role } = await assignAdminService(groupId, userId, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Member promoted to admin"));
+    .json(new ApiResponse(200, { role }, "Member promoted to admin"));
 });
 
 // ==========================================
@@ -242,11 +267,12 @@ const assignAdmin = asyncHandler(async (req, res) => {
 // ==========================================
 const revokeAdmin = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const result = await revokeAdminService(groupId, req.user._id, userId);
+  // Correct Order: (groupId, memberId, ownerId)
+  const { role } = await revokeAdminService(groupId, userId, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Admin privileges revoked"));
+    .json(new ApiResponse(200, { role }, "Admin privileges revoked"));
 });
 
 // ==========================================

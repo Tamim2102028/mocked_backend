@@ -53,7 +53,35 @@ export const createPostService = async (postData, authorId) => {
     if (visibility === POST_VISIBILITY.INTERNAL) {
       throw new ApiError(
         400,
-        "Internal visibility is not allowed for profile posts"
+        `Internal visibility is not allowed for Profile posts`
+      );
+    }
+  } else if (postOnModel === POST_TARGET_MODELS.ROOM) {
+    if (visibility !== POST_VISIBILITY.PUBLIC) {
+      throw new ApiError(
+        400,
+        `Only public visibility is allowed for Room posts`
+      );
+    }
+  } else if (postOnModel === POST_TARGET_MODELS.PAGE) {
+    if (visibility === POST_VISIBILITY.INTERNAL) {
+      throw new ApiError(
+        400,
+        `Internal visibility is not allowed for Page posts`
+      );
+    }
+  } else if (postOnModel === POST_TARGET_MODELS.GROUP) {
+    if (visibility === POST_VISIBILITY.INTERNAL) {
+      throw new ApiError(
+        400,
+        `Internal visibility is not allowed for Group posts`
+      );
+    }
+  } else if (postOnModel === POST_TARGET_MODELS.CR_CORNER) {
+    if (visibility !== POST_VISIBILITY.PUBLIC) {
+      throw new ApiError(
+        400,
+        `Only public visibility is allowed for CR Corner posts`
       );
     }
   }

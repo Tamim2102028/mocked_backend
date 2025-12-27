@@ -21,6 +21,8 @@ import {
   revokeAdminService,
   getGroupFeedService,
   createGroupPostService,
+  deleteGroupService,
+  inviteMembersService,
 } from "../services/group.service.js";
 import {
   toggleLikePostService,
@@ -104,7 +106,45 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
 });
 
 // ==========================================
-// 🚀 6. GET SENT REQUESTS
+// 🚀 2. DELETE GROUP (Owner Only)
+// ==========================================
+const deleteGroup = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { groupId } = await deleteGroupService(slug, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { groupId }, "Group deleted successfully"));
+});
+
+// ==========================================
+// 🚀 3. INVITE MEMBERS
+// ==========================================
+const inviteMembers = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { targetUserIds } = req.body; // Array of user IDs
+
+  if (
+    !targetUserIds ||
+    !Array.isArray(targetUserIds) ||
+    targetUserIds.length === 0
+  ) {
+    throw new ApiError(400, "targetUserIds array is required");
+  }
+
+  const { results } = await inviteMembersService(
+    slug,
+    req.user._id,
+    targetUserIds
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { results }, "Invitations sent successfully"));
+});
+
+// ==========================================
+// 🚀 4. GET MY GROUPS
 // ==========================================
 const getSentRequestsGroups = asyncHandler(async (req, res) => {
   const groups = await getSentRequestsGroupsService(req.user._id);
@@ -525,4 +565,6 @@ export {
   deleteGroupPostComment,
   updateGroupPostComment,
   toggleGroupPostCommentLike,
+  deleteGroup,
+  inviteMembers,
 };

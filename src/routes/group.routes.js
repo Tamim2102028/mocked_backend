@@ -4,6 +4,8 @@ import {
   getGroupFeed,
   createGroupPost,
   createGroup,
+  deleteGroup,
+  inviteMembers,
   getMyGroups,
   getUniversityGroups,
   getCareerGroups,

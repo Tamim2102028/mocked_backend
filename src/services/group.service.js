@@ -966,8 +966,86 @@ const createGroupPostService = async (slug, userId, postData) => {
   return formattedPost;
 };
 
+const deleteGroupService = async (slug, userId) => {
+  // 1. Find Group
+  const group = await Group.findOne({ slug });
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  // 2. Verify Owner
+  const ownerMembership = await GroupMembership.findOne({
+    group: group._id,
+    user: userId,
+    role: GROUP_ROLES.OWNER,
+  });
+
+  if (!ownerMembership) {
+    throw new ApiError(403, "Only the owner can delete the group");
+  }
+
+  // 3. Delete All Memberships
+  await GroupMembership.deleteMany({ group: group._id });
+
+  // 4. Delete Group
+  await Group.findByIdAndDelete(group._id);
+
+  // TODO: Delete all posts, comments, etc. associated with the group (Cascade)
+
+  return { groupId: group._id };
+};
+
+const inviteMembersService = async (slug, userId, targetUserIds) => {
+  // 1. Find Group
+  const group = await Group.findOne({ slug });
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  // 2. Verify Inviter is a Member
+  const inviterMembership = await GroupMembership.findOne({
+    group: group._id,
+    user: userId,
+    status: GROUP_MEMBERSHIP_STATUS.JOINED,
+  });
+
+  if (!inviterMembership) {
+    throw new ApiError(403, "You must be a member to invite others");
+  }
+
+  // 3. Process Invites
+  const results = [];
+  for (const targetId of targetUserIds) {
+    // Check if already related
+    const existing = await GroupMembership.findOne({
+      group: group._id,
+      user: targetId,
+    });
+
+    if (existing) {
+      results.push({ userId: targetId, status: "ALREADY_ASSOCIATED" });
+      continue;
+    }
+
+    // Create Invite
+    await GroupMembership.create({
+      group: group._id,
+      user: targetId,
+      status: GROUP_MEMBERSHIP_STATUS.INVITED,
+      role: GROUP_ROLES.MEMBER,
+      inviter: userId, // Assuming schema supports inviter field, if not it's fine
+    });
+
+    results.push({ userId: targetId, status: "INVITED" });
+  }
+
+  return { results };
+};
+
 export {
   createGroupService,
+  deleteGroupService,
+  inviteMembersService,
   leaveGroupService,
   joinGroupService,
   cancelJoinRequestService,

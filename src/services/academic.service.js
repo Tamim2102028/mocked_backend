@@ -6,6 +6,7 @@ import { Institution } from "../models/institution.model.js";
  * @returns {Promise<Object|null>} - প্রতিষ্ঠান পাওয়া গেলে তার ডকুমেন্ট, না পেলে null.
  */
 
+// === Find Institution by Email Domain ===
 export const findInstitutionByEmailDomain = async (email) => {
   try {
     if (!email || !email.includes("@")) {

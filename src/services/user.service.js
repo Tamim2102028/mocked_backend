@@ -1,0 +1,470 @@
+import { User } from "../models/user.model.js";
+import { Friendship } from "../models/friendship.model.js";
+import { Follow } from "../models/follow.model.js";
+import { Post } from "../models/post.model.js";
+import { PostRead } from "../models/postRead.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { uploadFile } from "../utils/cloudinaryFileUpload.js";
+import { findInstitutionByEmailDomain } from "./academic.service.js";
+import {
+  USER_TYPES,
+  PROFILE_RELATION_STATUS,
+  POST_TARGET_MODELS,
+  POST_VISIBILITY,
+  FRIENDSHIP_STATUS,
+  FOLLOW_TARGET_MODELS,
+} from "../constants/index.js";
+import jwt from "jsonwebtoken";
+
+// --- Utility: Token Generator ---
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error("JWT Generation Error:", error);
+    throw new ApiError(
+      500,
+      "Something went wrong while generating referesh and access token"
+    );
+  }
+};
+
+// ==========================================
+// 🚀 1. REGISTER USER SERVICE
+// ==========================================
+export const registerUserService = async (userData, files) => {
+  const { fullName, email, password, userName, userType } = userData;
+
+  const existedUser = await User.findOne({ $or: [{ email }, { userName }] });
+  if (existedUser) {
+    throw new ApiError(409, "User with this email or username already exists");
+  }
+
+  if ([USER_TYPES.ADMIN, USER_TYPES.OWNER].includes(userType)) {
+    throw new ApiError(403, "Restricted user type.");
+  }
+
+  // 3. Check for institution using email domain
+  const institution = await findInstitutionByEmailDomain(email);
+
+  // 4. File Upload Logic
+  const avatarLocalPath = files?.avatar?.[0]?.path;
+  const coverImageLocalPath = files?.coverImage?.[0]?.path;
+  let avatar, coverImage;
+  if (avatarLocalPath) {
+    avatar = await uploadFile(avatarLocalPath);
+    if (!avatar) throw new ApiError(500, "Failed to upload avatar");
+  }
+  if (coverImageLocalPath) {
+    coverImage = await uploadFile(coverImageLocalPath);
+    if (!coverImage) throw new ApiError(500, "Failed to upload cover image");
+  }
+
+  // 5. Create User Payload with conditional institution linking
+  const userPayload = {
+    fullName,
+    email,
+    password,
+    userName,
+    userType,
+    // Default values
+    isStudentEmail: false,
+  };
+
+  if (avatar?.url) userPayload.avatar = avatar.url;
+  if (coverImage?.url) userPayload.coverImage = coverImage.url;
+
+  // If an institution was found, link it to the user
+  if (institution) {
+    userPayload.isStudentEmail = true;
+    userPayload.institution = institution._id;
+    userPayload.institutionType = institution.type;
+  }
+
+  const user = await User.create(userPayload);
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  if (!createdUser) {
+    throw new ApiError(500, "Something went wrong while registering the user");
+  }
+
+  // Token generation
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  );
+
+  return { user: createdUser, accessToken, refreshToken };
+};
+
+// ==========================================
+// 🚀 2. LOGIN USER SERVICE
+// ==========================================
+export const loginUserService = async ({ email, userName, password }) => {
+  if (!email && !userName) {
+    throw new ApiError(400, "Username or email is required");
+  }
+
+  const user = await User.findOne({
+    $or: [{ email }, { userName }],
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User does not exist");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid user credentials");
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id
+  );
+
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+
+  return { user: loggedInUser, accessToken, refreshToken };
+};
+
+// ==========================================
+// 🚀 3. LOGOUT USER SERVICE
+// ==========================================
+export const logoutUserService = async (userId) => {
+  await User.findByIdAndUpdate(
+    userId,
+    { $unset: { refreshToken: 1 } },
+    { new: true }
+  );
+  return {};
+};
+
+// ==========================================
+// 🚀 4. REFRESH TOKEN SERVICE
+// ==========================================
+export const refreshAccessTokenService = async (incomingRefreshToken) => {
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Unauthorized request");
+  }
+
+  try {
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user || incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh token is expired or used");
+    }
+
+    const { accessToken, refreshToken: newRefreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    return { accessToken, refreshToken: newRefreshToken };
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Invalid refresh token");
+  }
+};
+
+// ==========================================
+// 🚀 5. CHANGE PASSWORD SERVICE
+// ==========================================
+export const changePasswordService = async (
+  userId,
+  oldPassword,
+  newPassword
+) => {
+  const user = await User.findById(userId);
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "Invalid old password");
+  }
+
+  user.password = newPassword;
+  user.passwordChangedAt = Date.now();
+  await user.save({ validateBeforeSave: false });
+
+  return {};
+};
+
+// ==========================================
+// 🚀 7. UPDATE ACADEMIC PROFILE SERVICE
+// ==========================================
+export const updateAcademicProfileService = async (
+  userId,
+  userType,
+  updateData
+) => {
+  const {
+    institution,
+    department,
+    session,
+    section,
+    studentId,
+    teacherId,
+    rank,
+    officeHours,
+  } = updateData;
+
+  if (!institution || !department) {
+    throw new ApiError(400, "Institution and Department are required");
+  }
+
+  let academicInfoPayload = { department };
+
+  if (userType === USER_TYPES.STUDENT) {
+    if (!session) throw new ApiError(400, "Session is required for Students");
+    academicInfoPayload.session = session;
+    academicInfoPayload.section = section;
+    academicInfoPayload.studentId = studentId;
+  } else if (userType === USER_TYPES.TEACHER) {
+    academicInfoPayload.teacherId = teacherId;
+    academicInfoPayload.rank = rank;
+    academicInfoPayload.officeHours = officeHours;
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { institution, academicInfo: academicInfoPayload } },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  return user;
+};
+
+// ==========================================
+// 🚀 8. UPDATE AVATAR SERVICE
+// ==========================================
+export const updateUserAvatarService = async (userId, avatarLocalPath) => {
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+
+  const avatar = await uploadFile(avatarLocalPath);
+
+  if (!avatar.url) {
+    throw new ApiError(500, "Error uploading avatar");
+  }
+
+  await User.findByIdAndUpdate(
+    userId,
+    { $set: { avatar: avatar.url } },
+    { new: true }
+  ).select("-password");
+
+  return { url: avatar.url };
+};
+
+// ==========================================
+// 🚀 9. UPDATE COVER IMAGE SERVICE
+// ==========================================
+export const updateUserCoverImageService = async (
+  userId,
+  coverImageLocalPath
+) => {
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Cover image file is missing");
+  }
+
+  const coverImage = await uploadFile(coverImageLocalPath);
+
+  if (!coverImage.url) {
+    throw new ApiError(500, "Error uploading cover image");
+  }
+
+  await User.findByIdAndUpdate(
+    userId,
+    { $set: { coverImage: coverImage.url } },
+    { new: true }
+  ).select("-password");
+
+  return { url: coverImage.url };
+};
+
+// ==========================================
+// 🚀 10. UPDATE ACCOUNT DETAILS SERVICE
+// ==========================================
+export const updateAccountDetailsService = async (userId, updateData) => {
+  if (updateData.userName) {
+    throw new ApiError(400, "Username cannot be changed.");
+  }
+
+  const { phoneNumber } = updateData;
+
+  if (Object.keys(updateData).length === 0) {
+    throw new ApiError(400, "At least one field is required to update");
+  }
+
+  if (phoneNumber) {
+    const existingPhoneUser = await User.findOne({ phoneNumber });
+    if (
+      existingPhoneUser &&
+      existingPhoneUser._id.toString() !== userId.toString()
+    ) {
+      throw new ApiError(409, "Phone number already used by another account");
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: updateData },
+    { new: true }
+  ).select("-password -refreshToken");
+
+  return user;
+};
+
+// ==========================================
+// 🚀 11. GET USER PROFILE HEADER SERVICE
+// ==========================================
+export const getUserProfileHeaderService = async (
+  targetUsername,
+  currentUserId
+) => {
+  if (!targetUsername) {
+    throw new ApiError(400, "Username is required");
+  }
+
+  const user = await User.findOne({ userName: targetUsername })
+    .select("-password -refreshToken")
+    .populate("institution", "name logo")
+    .populate("academicInfo.department", "name code");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isSelf =
+    currentUserId && currentUserId.toString() === user._id.toString();
+  let relationStatus = PROFILE_RELATION_STATUS.NOT_FRIENDS;
+  let isFollowing = false;
+  let isBlockedByMe = false;
+  let isBlockedByTarget = false;
+
+  if (isSelf) {
+    relationStatus = PROFILE_RELATION_STATUS.SELF;
+  } else if (currentUserId) {
+    // Friendship Status
+    const friendship = await Friendship.findOne({
+      $or: [
+        { requester: currentUserId, recipient: user._id },
+        { requester: user._id, recipient: currentUserId },
+      ],
+    });
+
+    if (friendship) {
+      if (friendship.status === FRIENDSHIP_STATUS.ACCEPTED) {
+        relationStatus = PROFILE_RELATION_STATUS.FRIEND;
+      } else if (friendship.status === FRIENDSHIP_STATUS.BLOCKED) {
+        relationStatus = PROFILE_RELATION_STATUS.BLOCKED;
+        if (friendship.requester.toString() === currentUserId.toString()) {
+          isBlockedByMe = true;
+        } else {
+          isBlockedByTarget = true;
+        }
+      } else if (friendship.status === FRIENDSHIP_STATUS.PENDING) {
+        if (friendship.requester.toString() === currentUserId.toString()) {
+          relationStatus = PROFILE_RELATION_STATUS.REQUEST_SENT;
+        } else {
+          relationStatus = PROFILE_RELATION_STATUS.REQUEST_RECEIVED;
+        }
+      }
+    }
+
+    // Follow Status
+    const follow = await Follow.findOne({
+      follower: currentUserId,
+      following: user._id,
+      followingModel: FOLLOW_TARGET_MODELS.USER,
+    });
+    if (follow) isFollowing = true;
+  }
+
+  // 3. Calculate Posts Count (Dynamic)
+  let visibilityQuery = {
+    postOnId: user._id,
+    postOnModel: POST_TARGET_MODELS.USER,
+    isDeleted: false,
+    isArchived: false,
+  };
+
+  let postsCount = 0;
+
+  if (isSelf) {
+    // Own Profile: See everything
+    postsCount = await Post.countDocuments(visibilityQuery);
+  } else if (!isBlockedByMe && !isBlockedByTarget) {
+    // Visitor: Check Relationship (Only if NOT blocked)
+    const isFriend = relationStatus === PROFILE_RELATION_STATUS.FRIEND;
+    if (isFriend) {
+      visibilityQuery.visibility = {
+        $in: [POST_VISIBILITY.PUBLIC, POST_VISIBILITY.CONNECTIONS],
+      };
+    } else {
+      visibilityQuery.visibility = POST_VISIBILITY.PUBLIC;
+    }
+    postsCount = await Post.countDocuments(visibilityQuery);
+  }
+
+  // Recalculate counts to ensure accuracy
+  const realFollowersCount = await Follow.countDocuments({
+    following: user._id,
+    followingModel: FOLLOW_TARGET_MODELS.USER,
+  });
+  const realFollowingCount = await Follow.countDocuments({
+    follower: user._id,
+  });
+  const realConnectionsCount = await Friendship.countDocuments({
+    $or: [{ requester: user._id }, { recipient: user._id }],
+    status: FRIENDSHIP_STATUS.ACCEPTED,
+  });
+
+  return {
+    user,
+    meta: {
+      profile_relation_status: relationStatus,
+      isFollowing,
+      isBlockedByMe,
+      isBlockedByTarget,
+      isOwnProfile: isSelf,
+      stats: {
+        postsCount: postsCount,
+        friendsCount: realConnectionsCount,
+        followersCount: realFollowersCount,
+        followingCount: realFollowingCount,
+        publicFilesCount: 7, // TODO: Implement Files
+      },
+    },
+  };
+};
+
+// ==========================================
+// 🚀 12. GET USER DETAILS SERVICE
+// ==========================================
+export const getUserDetailsService = async (username) => {
+  const user = await User.findOne({ userName: username })
+    .select("-password -refreshToken")
+    .populate([
+      { path: "institution", select: "name" },
+      { path: "academicInfo.department", select: "name" },
+    ]);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return user;
+};

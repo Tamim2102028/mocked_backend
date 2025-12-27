@@ -92,7 +92,7 @@ export const addCommentService = async (postId, content, userId) => {
 export const deleteCommentService = async (commentId, userId) => {
   const comment = await Comment.findById(commentId);
 
-  if (!comment) {
+  if (!comment || comment.isDeleted) {
     throw new ApiError(404, "Comment not found");
   }
 
@@ -104,6 +104,12 @@ export const deleteCommentService = async (commentId, userId) => {
   // Soft Delete
   comment.isDeleted = true;
   await comment.save();
+
+  // Delete all reactions associated with this comment
+  await Reaction.deleteMany({
+    targetId: commentId,
+    targetModel: REACTION_TARGET_MODELS.COMMENT,
+  });
 
   // Decrement post comment count
   await Post.findByIdAndUpdate(comment.post, { $inc: { commentsCount: -1 } });
@@ -164,12 +170,6 @@ export const toggleCommentLikeService = async (commentId, userId) => {
 
   if (existingReaction) {
     await Reaction.findByIdAndDelete(existingReaction._id);
-    // Decrement likes count on comment if field exists (assuming it might based on user context,
-    // but safer to stick to what was there unless confirmed.
-    // User mentioned "direct likecount" exists. Let's assume we should maintain it if it exists.
-    // However, without seeing the model, I'll stick to the logic provided in the controller
-    // BUT I will add the increment/decrement logic if I can confirm the model has it.
-    // For now, I'll replicate the controller logic exactly.)
     isLiked = false;
   } else {
     await Reaction.create({
@@ -178,17 +178,6 @@ export const toggleCommentLikeService = async (commentId, userId) => {
       user: userId,
     });
     isLiked = true;
-  }
-
-  // Update likesCount if it exists in schema (Optional improvement based on user's hint about "direct likecount")
-  // Since I can't see the model file (it wasn't at the path I checked), I'll try to guess or just stick to the controller.
-  // Wait, the user said "db te to stats nai..okhane o direct likecount commentcount etc ase".
-  // This strongly suggests I SHOULD update likesCount on the Comment model.
-
-  if (isLiked) {
-    await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: 1 } });
-  } else {
-    await Comment.findByIdAndUpdate(commentId, { $inc: { likesCount: -1 } });
   }
 
   return { isLiked };

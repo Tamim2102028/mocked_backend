@@ -16,41 +16,37 @@ import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { createPostService } from "./post.service.js";
 
-const createGroupService = async ({
-  name,
-  description,
-  type,
-  privacy,
-  settings,
-  files,
-  creatorId,
-}) => {
+const createGroupService = async (
+  groupData,
+  userId,
+  avatarLocalPath,
+  coverImageLocalPath
+) => {
   // Handle Image Uploads
   let avatar = "";
   let coverImage = "";
 
-  if (files) {
-    // Avatar
-    if (files.avatar && files.avatar[0]) {
-      const uploadResult = await uploadFile(files.avatar[0].path);
-      if (uploadResult) {
-        avatar = uploadResult.secure_url;
-      }
+  // Avatar
+  if (avatarLocalPath) {
+    const uploadResult = await uploadFile(avatarLocalPath);
+    if (uploadResult) {
+      avatar = uploadResult.secure_url;
     }
-    // Cover Image
-    if (files.coverImage && files.coverImage[0]) {
-      const uploadResult = await uploadFile(files.coverImage[0].path);
-      if (uploadResult) {
-        coverImage = uploadResult.secure_url;
-      }
+  }
+
+  // Cover Image
+  if (coverImageLocalPath) {
+    const uploadResult = await uploadFile(coverImageLocalPath);
+    if (uploadResult) {
+      coverImage = uploadResult.secure_url;
     }
   }
 
   // Parse settings if it's a string (FormData sends objects as JSON strings)
-  let parsedSettings = settings;
-  if (typeof settings === "string") {
+  let parsedSettings = groupData.settings;
+  if (typeof groupData.settings === "string") {
     try {
-      parsedSettings = JSON.parse(settings);
+      parsedSettings = JSON.parse(groupData.settings);
     } catch (error) {
       parsedSettings = {
         allowMemberPosting: true,
@@ -60,7 +56,7 @@ const createGroupService = async ({
   }
 
   // Generate unique slug
-  const baseSlug = name
+  const baseSlug = groupData.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
@@ -94,13 +90,13 @@ const createGroupService = async ({
 
   // Create Group
   const group = await Group.create({
-    name,
+    name: groupData.name,
     slug,
-    description: description || "",
-    type: type || GROUP_TYPES.GENERAL,
-    privacy: privacy || GROUP_PRIVACY.PUBLIC,
-    creator: creatorId,
-    owner: creatorId,
+    description: groupData.description || "",
+    type: groupData.type || GROUP_TYPES.GENERAL,
+    privacy: groupData.privacy || GROUP_PRIVACY.PUBLIC,
+    creator: userId,
+    owner: userId,
     membersCount: 1,
     avatar:
       avatar ||
@@ -118,30 +114,30 @@ const createGroupService = async ({
   // Add Creator as Member (OWNER)
   await GroupMembership.create({
     group: group._id,
-    user: creatorId,
+    user: userId,
     role: GROUP_ROLES.OWNER,
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
     joinedAt: new Date(),
+    joinedMethod: GROUP_JOIN_METHOD.CREATOR,
   });
 
   const meta = {
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
     isMember: true,
     isAdmin: true, // Owner is admin
+    isOwner: true,
   };
 
   return { group, meta };
 };
 
 // === Leave Group Service ===
-const leaveGroupService = async (slug, userId) => {
+const leaveGroupService = async (groupId, userId) => {
   // 1. Check if group exists
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
-
-  const groupId = group._id;
 
   // 2. Check membership
   const membership = await GroupMembership.findOne({
@@ -177,13 +173,11 @@ const leaveGroupService = async (slug, userId) => {
   };
 };
 
-const joinGroupService = async (slug, userId) => {
-  const group = await Group.findOne({ slug });
+const joinGroupService = async (groupId, userId) => {
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
-
-  const groupId = group._id;
 
   // Check if already a member or pending
   const existingMembership = await GroupMembership.findOne({
@@ -236,14 +230,14 @@ const joinGroupService = async (slug, userId) => {
   return { status };
 };
 
-const cancelJoinRequestService = async (slug, userId) => {
-  const group = await Group.findOne({ slug });
+const cancelJoinRequestService = async (groupId, userId) => {
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   const membership = await GroupMembership.findOneAndDelete({
-    group: group._id,
+    group: groupId,
     user: userId,
     status: GROUP_MEMBERSHIP_STATUS.PENDING,
   });
@@ -255,16 +249,16 @@ const cancelJoinRequestService = async (slug, userId) => {
   return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
 };
 
-const acceptJoinRequestService = async (slug, adminId, targetUserId) => {
+const acceptJoinRequestService = async (groupId, adminId, targetUserId) => {
   // 1. Find Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   // 2. Validate Admin Permissions
   const adminMembership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: adminId,
     role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
   });
@@ -275,7 +269,7 @@ const acceptJoinRequestService = async (slug, adminId, targetUserId) => {
 
   // 3. Find Request
   const membership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: targetUserId,
     status: GROUP_MEMBERSHIP_STATUS.PENDING,
   });
@@ -290,23 +284,23 @@ const acceptJoinRequestService = async (slug, adminId, targetUserId) => {
   await membership.save();
 
   // 5. Update Group Count
-  await Group.findByIdAndUpdate(group._id, {
+  await Group.findByIdAndUpdate(groupId, {
     $inc: { membersCount: 1 },
   });
 
   return { status: GROUP_MEMBERSHIP_STATUS.JOINED };
 };
 
-const rejectJoinRequestService = async (slug, adminId, targetUserId) => {
+const rejectJoinRequestService = async (groupId, adminId, targetUserId) => {
   // 1. Find Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   // 2. Validate Admin Permissions
   const adminMembership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: adminId,
     role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
   });
@@ -317,7 +311,7 @@ const rejectJoinRequestService = async (slug, adminId, targetUserId) => {
 
   // 3. Find Request
   const membership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: targetUserId,
     status: GROUP_MEMBERSHIP_STATUS.PENDING,
   });
@@ -332,12 +326,10 @@ const rejectJoinRequestService = async (slug, adminId, targetUserId) => {
   return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
 };
 
-const removeMemberService = async (slug, memberId, adminId) => {
+const removeMemberService = async (groupId, memberId, adminId) => {
   // 1. Validate Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) throw new ApiError(404, "Group not found");
-
-  const groupId = group._id;
 
   // 2. Validate Admin Permissions
   const adminMembership = await GroupMembership.findOne({
@@ -376,12 +368,10 @@ const removeMemberService = async (slug, memberId, adminId) => {
   return { memberId };
 };
 
-const assignAdminService = async (slug, memberId, ownerId) => {
+const assignAdminService = async (groupId, memberId, ownerId) => {
   // 1. Verify Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) throw new ApiError(404, "Group not found");
-
-  const groupId = group._id;
 
   // 2. Verify Owner
   const ownerMembership = await GroupMembership.findOne({
@@ -841,11 +831,11 @@ const getGroupMembersService = async (groupId, page = 1, limit = 10) => {
   };
 };
 
-const getGroupFeedService = async (slug, userId, page = 1, limit = 10) => {
+const getGroupFeedService = async (groupId, userId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
   // 1. Find Group
-  const group = await Group.findOne({ slug }).select("_id privacy settings");
+  const group = await Group.findById(groupId).select("_id privacy settings");
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
@@ -853,7 +843,7 @@ const getGroupFeedService = async (slug, userId, page = 1, limit = 10) => {
   // 2. Check Permission (If Private, must be member)
   if (group.privacy === GROUP_PRIVACY.PRIVATE) {
     const membership = await GroupMembership.findOne({
-      group: group._id,
+      group: groupId,
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
     });
@@ -866,7 +856,7 @@ const getGroupFeedService = async (slug, userId, page = 1, limit = 10) => {
   // 3. Query Posts
   const query = {
     postOnModel: POST_TARGET_MODELS.GROUP,
-    postOnId: group._id,
+    postOnId: groupId,
     isDeleted: false,
     isArchived: false,
   };
@@ -924,16 +914,16 @@ const getGroupFeedService = async (slug, userId, page = 1, limit = 10) => {
   };
 };
 
-const createGroupPostService = async (slug, userId, postData) => {
+const createGroupPostService = async (groupId, userId, postData) => {
   // 1. Find Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   // 2. Check Membership
   const membership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: userId,
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
   });
@@ -954,28 +944,28 @@ const createGroupPostService = async (slug, userId, postData) => {
   const newPostData = {
     ...postData,
     postOnModel: POST_TARGET_MODELS.GROUP,
-    postOnId: group._id,
+    postOnId: groupId,
   };
 
   // 5. Create Post using common service
   const formattedPost = await createPostService(newPostData, userId);
 
   // 6. Update Group Stats
-  await Group.findByIdAndUpdate(group._id, { $inc: { postsCount: 1 } });
+  await Group.findByIdAndUpdate(groupId, { $inc: { postsCount: 1 } });
 
   return formattedPost;
 };
 
-const deleteGroupService = async (slug, userId) => {
+const deleteGroupService = async (groupId, userId) => {
   // 1. Find Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   // 2. Verify Owner
   const ownerMembership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: userId,
     role: GROUP_ROLES.OWNER,
   });
@@ -985,26 +975,26 @@ const deleteGroupService = async (slug, userId) => {
   }
 
   // 3. Delete All Memberships
-  await GroupMembership.deleteMany({ group: group._id });
+  await GroupMembership.deleteMany({ group: groupId });
 
   // 4. Delete Group
-  await Group.findByIdAndDelete(group._id);
+  await Group.findByIdAndDelete(groupId);
 
   // TODO: Delete all posts, comments, etc. associated with the group (Cascade)
 
-  return { groupId: group._id };
+  return { groupId };
 };
 
-const inviteMembersService = async (slug, userId, targetUserIds) => {
+const inviteMembersService = async (groupId, userId, targetUserIds) => {
   // 1. Find Group
-  const group = await Group.findOne({ slug });
+  const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   // 2. Verify Inviter is a Member
   const inviterMembership = await GroupMembership.findOne({
-    group: group._id,
+    group: groupId,
     user: userId,
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
   });
@@ -1018,7 +1008,7 @@ const inviteMembersService = async (slug, userId, targetUserIds) => {
   for (const targetId of targetUserIds) {
     // Check if already related
     const existing = await GroupMembership.findOne({
-      group: group._id,
+      group: groupId,
       user: targetId,
     });
 
@@ -1029,7 +1019,7 @@ const inviteMembersService = async (slug, userId, targetUserIds) => {
 
     // Create Invite
     await GroupMembership.create({
-      group: group._id,
+      group: groupId,
       user: targetId,
       status: GROUP_MEMBERSHIP_STATUS.INVITED,
       role: GROUP_ROLES.MEMBER,

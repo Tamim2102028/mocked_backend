@@ -109,19 +109,28 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
 // 🚀 2. DELETE GROUP (Owner Only)
 // ==========================================
 const deleteGroup = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-  const { groupId } = await deleteGroupService(slug, req.user._id);
+  const { groupId } = req.params;
+  const { groupId: deletedGroupId } = await deleteGroupService(
+    groupId,
+    req.user._id
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { groupId }, "Group deleted successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { groupId: deletedGroupId },
+        "Group deleted successfully"
+      )
+    );
 });
 
 // ==========================================
 // 🚀 3. INVITE MEMBERS
 // ==========================================
 const inviteMembers = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { groupId } = req.params;
   const { targetUserIds } = req.body; // Array of user IDs
 
   if (
@@ -133,7 +142,7 @@ const inviteMembers = asyncHandler(async (req, res) => {
   }
 
   const { results } = await inviteMembersService(
-    slug,
+    groupId,
     req.user._id,
     targetUserIds
   );
@@ -175,8 +184,8 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
 // 🚀 8. JOIN GROUP
 // ==========================================
 const joinGroup = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-  const { status } = await joinGroupService(slug, req.user._id);
+  const { groupId } = req.params;
+  const { status } = await joinGroupService(groupId, req.user._id);
 
   return res
     .status(200)
@@ -187,8 +196,8 @@ const joinGroup = asyncHandler(async (req, res) => {
 // 🚀 9. LEAVE GROUP
 // ==========================================
 const leaveGroup = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-  const { status } = await leaveGroupService(slug, req.user._id);
+  const { groupId } = req.params;
+  const { status } = await leaveGroupService(groupId, req.user._id);
 
   return res
     .status(200)
@@ -199,8 +208,8 @@ const leaveGroup = asyncHandler(async (req, res) => {
 // 🚀 10. CANCEL JOIN REQUEST
 // ==========================================
 const cancelJoinRequest = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-  const { status } = await cancelJoinRequestService(slug, req.user._id);
+  const { groupId } = req.params;
+  const { status } = await cancelJoinRequestService(groupId, req.user._id);
 
   return res
     .status(200)
@@ -213,10 +222,14 @@ const cancelJoinRequest = asyncHandler(async (req, res) => {
 // 🚀 11. ACCEPT JOIN REQUEST (Admin Only)
 // ==========================================
 const acceptJoinRequest = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { groupId } = req.params;
   const { userId } = req.body;
 
-  const { status } = await acceptJoinRequestService(slug, req.user._id, userId);
+  const { status } = await acceptJoinRequestService(
+    groupId,
+    req.user._id,
+    userId
+  );
 
   return res
     .status(200)
@@ -227,10 +240,14 @@ const acceptJoinRequest = asyncHandler(async (req, res) => {
 // 🚀 12. REJECT JOIN REQUEST (Admin Only)
 // ==========================================
 const rejectJoinRequest = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { groupId } = req.params;
   const { userId } = req.body;
 
-  const { status } = await rejectJoinRequestService(slug, req.user._id, userId);
+  const { status } = await rejectJoinRequestService(
+    groupId,
+    req.user._id,
+    userId
+  );
 
   return res
     .status(200)
@@ -259,9 +276,9 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 // 🚀 14. GET GROUP MEMBERS
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { groupId } = req.params;
   const { members, pagination } = await getGroupMembersService(
-    slug,
+    groupId,
     req.user._id
   );
 
@@ -280,8 +297,8 @@ const getGroupMembers = asyncHandler(async (req, res) => {
 // 🚀 15. REMOVE MEMBER (Admin Only)
 // ==========================================
 const removeMember = asyncHandler(async (req, res) => {
-  const { slug, userId } = req.params;
-  const { memberId } = await removeMemberService(slug, userId, req.user._id);
+  const { groupId, userId } = req.params;
+  const { memberId } = await removeMemberService(groupId, userId, req.user._id);
 
   return res
     .status(200)
@@ -292,8 +309,8 @@ const removeMember = asyncHandler(async (req, res) => {
 // 🚀 16. ASSIGN ADMIN (Owner/Admin Only)
 // ==========================================
 const assignAdmin = asyncHandler(async (req, res) => {
-  const { slug, userId } = req.params;
-  const { role } = await assignAdminService(slug, userId, req.user._id);
+  const { groupId, userId } = req.params;
+  const { role } = await assignAdminService(groupId, userId, req.user._id);
 
   return res
     .status(200)
@@ -304,8 +321,8 @@ const assignAdmin = asyncHandler(async (req, res) => {
 // 🚀 17. REVOKE ADMIN (Owner Only)
 // ==========================================
 const revokeAdmin = asyncHandler(async (req, res) => {
-  const { slug, userId } = req.params;
-  const { role } = await revokeAdminService(slug, userId, req.user._id);
+  const { groupId, userId } = req.params;
+  const { role } = await revokeAdminService(groupId, userId, req.user._id);
 
   return res
     .status(200)
@@ -316,11 +333,11 @@ const revokeAdmin = asyncHandler(async (req, res) => {
 // 🚀 18. GET GROUP FEED
 // ==========================================
 const getGroupFeed = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { groupId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
   const { posts, pagination } = await getGroupFeedService(
-    slug,
+    groupId,
     req.user._id,
     page,
     limit
@@ -335,11 +352,11 @@ const getGroupFeed = asyncHandler(async (req, res) => {
 // 🚀 19. CREATE GROUP POST
 // ==========================================
 const createGroupPost = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+  const { groupId } = req.params;
   const postData = req.body;
 
   const { post, meta } = await createGroupPostService(
-    slug,
+    groupId,
     req.user._id,
     postData
   );

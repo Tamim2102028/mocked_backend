@@ -1,63 +1,55 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
-import mongoose from "mongoose";
+import { getDeptFeedService } from "../services/academic.service.js";
+import {
+  createPostService,
+  toggleLikePostService,
+  toggleMarkAsReadService,
+  deletePostService,
+  updatePostService,
+} from "../services/post.service.js";
+import {
+  getPostCommentsService,
+  addCommentService,
+  deleteCommentService,
+  updateCommentService,
+  toggleCommentLikeService,
+} from "../services/comment.service.js";
 
-const _objectId = () => new mongoose.Types.ObjectId().toString();
-
+// 🚀 1. GET DEPT FEED
 const getDeptFeed = asyncHandler(async (req, res) => {
   const { deptId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
 
-  const posts = [
-    {
-      _id: "dept_post_1",
-      content: "মিড-টার্ম পরীক্ষার রুটিন প্রকাশ করা হয়েছে।",
-      type: POST_TYPES.NOTICE,
-      postOnModel: POST_TARGET_MODELS.DEPARTMENT,
-      postOnId: deptId,
-      author: {
-        _id: "u_head_1",
-        fullName: "Department Head",
-        userName: "cse_official",
-        avatar: "https://ui-avatars.com/api/?name=Head",
-        userType: "TEACHER",
-      },
-      stats: { likes: 120, comments: 0, shares: 50 },
-      context: { isLiked: false, isSaved: true, isRead: false, isMine: false },
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  const result = await getDeptFeedService(deptId, req.user._id, page, limit);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { posts }, "Dept feed fetched"));
+    .json(new ApiResponse(200, result, "Dept feed fetched"));
 });
 
-// Create Dept Post (Only for Admin/Head)
+// 🚀 2. CREATE DEPT POST (Only for Admin/Head)
 const createDeptPost = asyncHandler(async (req, res) => {
   const { deptId } = req.params;
   const { content } = req.body;
 
-  const post = {
-    _id: _objectId(),
+  // Prepare post data for generic service
+  const postData = {
     content,
-    type: POST_TYPES.NOTICE, // ডিপার্টমেন্ট মানেই অফিসিয়াল নোটিশ
+    type: POST_TYPES.NOTICE, // Default to NOTICE for dept posts
     postOnModel: POST_TARGET_MODELS.DEPARTMENT,
     postOnId: deptId,
-    author: {
-      _id: req.user._id,
-      fullName: req.user.fullName,
-      userName: req.user.userName,
-      avatar: req.user.avatar,
-    },
-    stats: { likes: 0, comments: 0, shares: 0 },
-    context: { isLiked: false, isSaved: false, isRead: true, isMine: true },
-    createdAt: new Date().toISOString(),
+    // Add other fields if necessary, e.g., attachments
+    ...req.body,
   };
+
+  const formattedPost = await createPostService(postData, req.user._id);
 
   return res
     .status(201)
-    .json(new ApiResponse(201, { post }, "Official notice posted"));
+    .json(new ApiResponse(201, formattedPost, "Official notice posted"));
 });
 
 // 🚀 3. GET DEPT DETAILS
@@ -108,4 +100,129 @@ const getTeachers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { teachers }, "Teachers list fetched"));
 });
 
-export { getDeptFeed, createDeptPost, getDeptDetails, getTeachers };
+// ==========================================
+// 🚀 POST & COMMENT ACTIONS (Shared Logic)
+// ==========================================
+
+// 🚀 TOGGLE LIKE DEPT POST
+const toggleDeptPostLike = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const result = await toggleLikePostService(postId, req.user._id);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        result,
+        result.isLiked ? "Post liked" : "Post unliked"
+      )
+    );
+});
+
+// 🚀 TOGGLE MARK AS READ
+const toggleDeptPostRead = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const result = await toggleMarkAsReadService(postId, req.user._id);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        result,
+        result.isRead ? "Marked as read" : "Marked as unread"
+      )
+    );
+});
+
+// 🚀 DELETE DEPT POST
+const deleteDeptPost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const result = await deletePostService(postId, req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Post deleted successfully"));
+});
+
+// 🚀 UPDATE DEPT POST
+const updateDeptPost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const updatedPost = await updatePostService(postId, req.user._id, req.body);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedPost, "Post updated successfully"));
+});
+
+// 🚀 GET POST COMMENTS
+const getDeptPostComments = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+  const result = await getPostCommentsService(
+    postId,
+    page,
+    limit,
+    req.user._id
+  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comments fetched successfully"));
+});
+
+// 🚀 ADD COMMENT
+const createDeptPostComment = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { content } = req.body;
+  if (!content?.trim()) {
+    throw new ApiError(400, "Comment content is required");
+  }
+  const result = await addCommentService(postId, content, req.user._id);
+  return res
+    .status(201)
+    .json(new ApiResponse(201, result, "Comment added successfully"));
+});
+
+// 🚀 DELETE COMMENT
+const deleteDeptPostComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const result = await deleteCommentService(commentId, req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comment deleted successfully"));
+});
+
+// 🚀 UPDATE COMMENT
+const updateDeptPostComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const { content } = req.body;
+  if (!content?.trim()) {
+    throw new ApiError(400, "Content is required");
+  }
+  const result = await updateCommentService(commentId, content, req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comment updated successfully"));
+});
+
+// 🚀 TOGGLE COMMENT LIKE
+const toggleDeptPostCommentLike = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const result = await toggleCommentLikeService(commentId, req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comment like toggled"));
+});
+
+export {
+  getDeptFeed,
+  createDeptPost,
+  getDeptDetails,
+  getTeachers,
+  toggleDeptPostLike,
+  toggleDeptPostRead,
+  deleteDeptPost,
+  updateDeptPost,
+  getDeptPostComments,
+  createDeptPostComment,
+  deleteDeptPostComment,
+  updateDeptPostComment,
+  toggleDeptPostCommentLike,
+};

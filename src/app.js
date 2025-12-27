@@ -28,9 +28,7 @@ app.use(cookieParser());
 
 // Import and use routes
 import userRouter from "./routes/user.routes.js";
-import postRouter from "./routes/post.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
-import commentRouter from "./routes/comment.routes.js";
 import crRouter from "./routes/cr.routes.js";
 import groupRouter from "./routes/group.routes.js";
 import deptRouter from "./routes/dept.routes.js";
@@ -41,9 +39,7 @@ import followRouter from "./routes/follow.routes.js";
 import profileRouter from "./routes/profile.routes.js";
 
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/posts", postRouter);
 app.use("/api/v1/profile", profileRouter);
-app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/cr-corner", crRouter);
 app.use("/api/v1/groups", groupRouter);
 app.use("/api/v1/depts", deptRouter);

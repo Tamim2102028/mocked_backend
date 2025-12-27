@@ -3,204 +3,269 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import {
   createGroupService,
-  leaveGroupService,
-  joinGroupService,
-  cancelJoinRequestService,
-  acceptJoinRequestService,
-  rejectJoinRequestService,
-  removeMemberService,
-  assignAdminService,
-  revokeAdminService,
   getMyGroupsService,
   getUniversityGroupsService,
   getCareerGroupsService,
   getSuggestedGroupsService,
   getSentRequestsGroupsService,
   getInvitedGroupsService,
+  joinGroupService,
+  leaveGroupService,
+  cancelJoinRequestService,
+  acceptJoinRequestService,
+  rejectJoinRequestService,
   getGroupDetailsService,
   getGroupMembersService,
+  removeMemberService,
+  assignAdminService,
+  revokeAdminService,
   getGroupFeedService,
   createGroupPostService,
 } from "../services/group.service.js";
+import {
+  toggleLikePostService,
+  toggleMarkAsReadService,
+  deletePostService,
+  updatePostService,
+} from "../services/post.service.js";
+import {
+  getPostCommentsService,
+  addCommentService,
+  deleteCommentService,
+  updateCommentService,
+  toggleCommentLikeService,
+} from "../services/comment.service.js";
 
-// 1. CREATE GROUP
+// ==========================================
+// 🚀 1. CREATE GROUP
+// ==========================================
 const createGroup = asyncHandler(async (req, res) => {
-  let { name, description, type, privacy, settings } = req.body;
+  const avatarLocalPath = req.files?.avatar?.[0]?.path;
+  const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
-  if (!name) {
-    throw new ApiError(400, "Group name is required");
-  }
-
-  const { group, meta } = await createGroupService({
-    name,
-    description,
-    type,
-    privacy,
-    settings,
-    files: req.files,
-    creatorId: req.user._id,
-  });
+  const result = await createGroupService(
+    req.body,
+    req.user._id,
+    avatarLocalPath,
+    coverImageLocalPath
+  );
 
   return res
     .status(201)
-    .json(new ApiResponse(201, { group, meta }, "Group created successfully"));
+    .json(new ApiResponse(201, result, "Group created successfully"));
 });
 
-// 2. GET MY GROUPS
+// ==========================================
+// 🚀 2. GET MY GROUPS
+// ==========================================
 const getMyGroups = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const { groups, pagination } = await getMyGroupsService(
-    req.user._id,
-    page,
-    limit
-  );
+  const groups = await getMyGroupsService(req.user._id);
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { groups, pagination },
-        "My groups fetched successfully"
-      )
-    );
+    .json(new ApiResponse(200, groups, "My groups fetched successfully"));
 });
 
-// 3. GET UNIVERSITY GROUPS
+// ==========================================
+// 🚀 3. GET UNIVERSITY GROUPS
+// ==========================================
 const getUniversityGroups = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const { groups, pagination } = await getUniversityGroupsService(
-    req.user._id,
-    page,
-    limit
-  );
+  const groups = await getUniversityGroupsService(req.user._id);
 
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        { groups, pagination },
-        "University groups fetched successfully"
-      )
+      new ApiResponse(200, groups, "University groups fetched successfully")
     );
 });
 
-// 4. GET CAREER GROUPS
+// ==========================================
+// 🚀 4. GET CAREER GROUPS
+// ==========================================
 const getCareerGroups = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const { groups, pagination } = await getCareerGroupsService(
-    req.user._id,
-    page,
-    limit
-  );
+  const groups = await getCareerGroupsService(req.user._id);
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { groups, pagination },
-        "Career groups fetched successfully"
-      )
-    );
+    .json(new ApiResponse(200, groups, "Career groups fetched successfully"));
 });
 
-// 5. GET SUGGESTED GROUPS
+// ==========================================
+// 🚀 5. GET SUGGESTED GROUPS
+// ==========================================
 const getSuggestedGroups = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const { groups, pagination } = await getSuggestedGroupsService(
-    req.user._id,
-    page,
-    limit
-  );
+  const groups = await getSuggestedGroupsService(req.user._id);
 
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        { groups, pagination },
-        "Suggested groups fetched successfully"
-      )
+      new ApiResponse(200, groups, "Suggested groups fetched successfully")
     );
 });
 
-// 6. GET SENT REQUESTS
+// ==========================================
+// 🚀 6. GET SENT REQUESTS
+// ==========================================
 const getSentRequestsGroups = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const { groups, pagination } = await getSentRequestsGroupsService(
-    req.user._id,
-    page,
-    limit
-  );
+  const groups = await getSentRequestsGroupsService(req.user._id);
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { groups, pagination },
-        "Sent requests fetched successfully"
-      )
-    );
+    .json(new ApiResponse(200, groups, "Sent requests fetched successfully"));
 });
 
-// 7. GET INVITED GROUPS
+// ==========================================
+// 🚀 7. GET INVITED GROUPS
+// ==========================================
 const getInvitedGroups = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const { groups, pagination } = await getInvitedGroupsService(
-    req.user._id,
-    page,
-    limit
-  );
+  const groups = await getInvitedGroupsService(req.user._id);
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { groups, pagination },
-        "Invited groups fetched successfully"
-      )
-    );
+    .json(new ApiResponse(200, groups, "Invited groups fetched successfully"));
 });
 
-// 8. GET GROUP DETAILS
+// ==========================================
+// 🚀 8. JOIN GROUP
+// ==========================================
+const joinGroup = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const result = await joinGroupService(slug, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Join request sent successfully"));
+});
+
+// ==========================================
+// 🚀 9. LEAVE GROUP
+// ==========================================
+const leaveGroup = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const result = await leaveGroupService(groupId, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Left group successfully"));
+});
+
+// ==========================================
+// 🚀 10. CANCEL JOIN REQUEST
+// ==========================================
+const cancelJoinRequest = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const result = await cancelJoinRequestService(slug, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Join request cancelled successfully"));
+});
+
+// ==========================================
+// 🚀 11. ACCEPT JOIN REQUEST (Admin Only)
+// ==========================================
+const acceptJoinRequest = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { userId } = req.body;
+
+  const result = await acceptJoinRequestService(slug, req.user._id, userId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "User request accepted"));
+});
+
+// ==========================================
+// 🚀 12. REJECT JOIN REQUEST (Admin Only)
+// ==========================================
+const rejectJoinRequest = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { userId } = req.body;
+
+  const result = await rejectJoinRequestService(slug, req.user._id, userId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "User request rejected"));
+});
+
+// ==========================================
+// 🚀 13. GET GROUP DETAILS
+// ==========================================
 const getGroupDetails = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-
-  const { group, meta } = await getGroupDetailsService(slug, req.user._id);
+  const result = await getGroupDetailsService(slug, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { group, meta }, "Group details fetched"));
+    .json(new ApiResponse(200, result, "Group details fetched successfully"));
 });
 
-// 9. GET GROUP FEED
+// ==========================================
+// 🚀 14. GET GROUP MEMBERS
+// ==========================================
+const getGroupMembers = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const result = await getGroupMembersService(groupId, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Group members fetched successfully"));
+});
+
+// ==========================================
+// 🚀 15. REMOVE MEMBER (Admin Only)
+// ==========================================
+const removeMember = asyncHandler(async (req, res) => {
+  const { groupId, userId } = req.params;
+  const result = await removeMemberService(groupId, req.user._id, userId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Member removed successfully"));
+});
+
+// ==========================================
+// 🚀 16. ASSIGN ADMIN (Owner/Admin Only)
+// ==========================================
+const assignAdmin = asyncHandler(async (req, res) => {
+  const { groupId, userId } = req.params;
+  const result = await assignAdminService(groupId, req.user._id, userId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Member promoted to admin"));
+});
+
+// ==========================================
+// 🚀 17. REVOKE ADMIN (Owner Only)
+// ==========================================
+const revokeAdmin = asyncHandler(async (req, res) => {
+  const { groupId, userId } = req.params;
+  const result = await revokeAdminService(groupId, req.user._id, userId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Admin privileges revoked"));
+});
+
+// ==========================================
+// 🚀 18. GET GROUP FEED
+// ==========================================
 const getGroupFeed = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  const { posts, pagination } = await getGroupFeedService(
-    slug,
-    req.user._id,
-    page,
-    limit
-  );
+  const result = await getGroupFeedService(slug, req.user._id, page, limit);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { posts, pagination }, "Group feed fetched"));
+    .json(new ApiResponse(200, result, "Group feed fetched"));
 });
 
-// 10. CREATE GROUP POST
+// ==========================================
+// 🚀 19. CREATE GROUP POST
+// ==========================================
 const createGroupPost = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const postData = req.body;
@@ -216,108 +281,149 @@ const createGroupPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { post, meta }, "Group post created"));
 });
 
-// 11. JOIN GROUP
-const joinGroup = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
+// ==========================================
+// 🚀 20. TOGGLE LIKE GROUP POST
+// ==========================================
+const toggleGroupPostLike = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
 
-  const { status } = await joinGroupService(slug, req.user._id);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { status }, "Join request processed"));
-});
-
-// 12. CANCEL JOIN REQUEST
-const cancelJoinRequest = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-
-  const { status } = await cancelJoinRequestService(slug, req.user._id);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { status }, "Join request cancelled"));
-});
-
-// 13. ACCEPT JOIN REQUEST
-const acceptJoinRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-
-  const { status } = await acceptJoinRequestService(requestId, req.user._id);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { status }, "Join request accepted"));
-});
-
-// 14. REJECT JOIN REQUEST
-const rejectJoinRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-
-  const { status } = await rejectJoinRequestService(requestId, req.user._id);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { status }, "Join request rejected"));
-});
-
-// 15. LEAVE GROUP
-const leaveGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-
-  const { status } = await leaveGroupService(groupId, req.user._id);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { status }, "Successfully left the group"));
-});
-
-// 16. REMOVE MEMBER
-const removeMember = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
-  const { memberId } = await removeMemberService(groupId, userId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { memberId }, "Member removed successfully"));
-});
-
-// 17. ASSIGN ADMIN
-const assignAdmin = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
-  const { role } = await assignAdminService(groupId, userId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { role }, "Member promoted to Admin"));
-});
-
-// 18. REVOKE ADMIN
-const revokeAdmin = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
-  const { role } = await revokeAdminService(groupId, userId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { role }, "Admin rights revoked"));
-});
-
-// 19. GET GROUP MEMBERS
-const getGroupMembers = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
-
-  const { members, pagination } = await getGroupMembersService(
-    groupId,
-    page,
-    limit
-  );
+  const result = await toggleLikePostService(postId, req.user._id);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { members, pagination },
-        "Members fetched successfully"
+        result,
+        result.isLiked ? "Post liked" : "Post unliked"
       )
     );
+});
+
+// ==========================================
+// 🚀 21. TOGGLE MARK AS READ
+// ==========================================
+const toggleGroupPostRead = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  const result = await toggleMarkAsReadService(postId, req.user._id);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        result,
+        result.isRead ? "Marked as read" : "Marked as unread"
+      )
+    );
+});
+
+// ==========================================
+// 🚀 22. DELETE GROUP POST
+// ==========================================
+const deleteGroupPost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  const result = await deletePostService(postId, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Post deleted successfully"));
+});
+
+// ==========================================
+// 🚀 23. UPDATE GROUP POST
+// ==========================================
+const updateGroupPost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  const updatedPost = await updatePostService(postId, req.user._id, req.body);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedPost, "Post updated successfully"));
+});
+
+// ==========================================
+// 🚀 24. GET POST COMMENTS
+// ==========================================
+const getGroupPostComments = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  const result = await getPostCommentsService(
+    postId,
+    page,
+    limit,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comments fetched successfully"));
+});
+
+// ==========================================
+// 🚀 25. ADD COMMENT
+// ==========================================
+const createGroupPostComment = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { content } = req.body;
+
+  if (!content?.trim()) {
+    throw new ApiError(400, "Comment content is required");
+  }
+
+  const result = await addCommentService(postId, content, req.user._id);
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, result, "Comment added successfully"));
+});
+
+// ==========================================
+// 🚀 26. DELETE COMMENT
+// ==========================================
+const deleteGroupPostComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+
+  const result = await deleteCommentService(commentId, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comment deleted successfully"));
+});
+
+// ==========================================
+// 🚀 27. UPDATE COMMENT
+// ==========================================
+const updateGroupPostComment = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+  const { content } = req.body;
+
+  if (!content?.trim()) {
+    throw new ApiError(400, "Content is required");
+  }
+
+  const result = await updateCommentService(commentId, content, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comment updated successfully"));
+});
+
+// ==========================================
+// 🚀 28. TOGGLE COMMENT LIKE
+// ==========================================
+const toggleGroupPostCommentLike = asyncHandler(async (req, res) => {
+  const { commentId } = req.params;
+
+  const result = await toggleCommentLikeService(commentId, req.user._id);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Comment like toggled"));
 });
 
 export {
@@ -328,16 +434,25 @@ export {
   getSuggestedGroups,
   getSentRequestsGroups,
   getInvitedGroups,
-  getGroupDetails,
-  getGroupFeed,
-  createGroupPost,
   joinGroup,
+  leaveGroup,
   cancelJoinRequest,
   acceptJoinRequest,
   rejectJoinRequest,
-  leaveGroup,
+  getGroupDetails,
+  getGroupMembers,
   removeMember,
   assignAdmin,
   revokeAdmin,
-  getGroupMembers,
+  getGroupFeed,
+  createGroupPost,
+  toggleGroupPostLike,
+  toggleGroupPostRead,
+  deleteGroupPost,
+  updateGroupPost,
+  getGroupPostComments,
+  createGroupPostComment,
+  deleteGroupPostComment,
+  updateGroupPostComment,
+  toggleGroupPostCommentLike,
 };

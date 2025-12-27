@@ -20,6 +20,15 @@ import {
   removeMember,
   assignAdmin,
   revokeAdmin,
+  toggleGroupPostLike,
+  toggleGroupPostRead,
+  deleteGroupPost,
+  updateGroupPost,
+  getGroupPostComments,
+  createGroupPostComment,
+  deleteGroupPostComment,
+  updateGroupPostComment,
+  toggleGroupPostCommentLike,
 } from "../controllers/group.controllers.js";
 import { uploadImage } from "../middlewares/multer.middleware.js";
 
@@ -62,5 +71,19 @@ router.delete("/:groupId/leave", leaveGroup);
 router.delete("/:groupId/members/:userId", removeMember);
 router.patch("/:groupId/members/:userId/assign-admin", assignAdmin);
 router.patch("/:groupId/members/:userId/revoke-admin", revokeAdmin);
+
+// ==========================================
+// 🚀 POST & COMMENT ACTIONS
+// ==========================================
+router.post("/posts/:postId/like", toggleGroupPostLike);
+router.post("/posts/:postId/read", toggleGroupPostRead);
+router.delete("/posts/:postId", deleteGroupPost);
+router.patch("/posts/:postId", updateGroupPost);
+
+router.get("/posts/:postId/comments", getGroupPostComments);
+router.post("/posts/:postId/comments", createGroupPostComment);
+router.delete("/comments/:commentId", deleteGroupPostComment);
+router.patch("/comments/:commentId", updateGroupPostComment);
+router.post("/comments/:commentId/like", toggleGroupPostCommentLike);
 
 export default router;

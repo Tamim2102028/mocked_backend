@@ -18,7 +18,10 @@ import {
 // 🚀 1. REGISTER USER
 // ==========================================
 const registerUser = asyncHandler(async (req, res) => {
-  const result = await registerUserService(req.body, req.files);
+  const { user, accessToken, refreshToken } = await registerUserService(
+    req.body,
+    req.files
+  );
 
   const options = {
     httpOnly: true,
@@ -27,16 +30,13 @@ const registerUser = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .cookie("accessToken", result.accessToken, options)
-    .cookie("refreshToken", result.refreshToken, options)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(
       new ApiResponse(
         200,
         {
-          user: result.user,
-          accessToken: result.accessToken,
-          // We are NOT sending refreshToken in JSON body for security.
-          // It's already in the httpOnly cookie.
+          user,
         },
         "User registered Successfully"
       )
@@ -47,7 +47,7 @@ const registerUser = asyncHandler(async (req, res) => {
 // 🚀 2. LOGIN USER
 // ==========================================
 const loginUser = asyncHandler(async (req, res) => {
-  const result = await loginUserService(req.body);
+  const { user, accessToken, refreshToken } = await loginUserService(req.body);
 
   const options = {
     httpOnly: true,
@@ -56,16 +56,13 @@ const loginUser = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .cookie("accessToken", result.accessToken, options)
-    .cookie("refreshToken", result.refreshToken, options)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
     .json(
       new ApiResponse(
         200,
         {
-          user: result.user,
-          accessToken: result.accessToken,
-          // We are NOT sending refreshToken in JSON body for security.
-          // It's already in the httpOnly cookie.
+          user,
         },
         "User logged In Successfully"
       )
@@ -97,7 +94,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
 
-  const result = await refreshAccessTokenService(incomingRefreshToken);
+  const { accessToken, refreshToken } = await refreshAccessTokenService(incomingRefreshToken);
 
   const options = {
     httpOnly: true,
@@ -106,19 +103,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .cookie("accessToken", result.accessToken, options)
-    .cookie("refreshToken", result.refreshToken, options)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          accessToken: result.accessToken,
-          // We are NOT sending refreshToken in JSON body for security.
-          // It's already in the httpOnly cookie.
-        },
-        "Access token refreshed"
-      )
-    );
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(new ApiResponse(200, {}, "Access token refreshed"));
 });
 
 // ==========================================
@@ -137,24 +124,36 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 // 🚀 6. GET CURRENT USER (Me)
 // ==========================================
 const getCurrentUser = asyncHandler(async (req, res) => {
-  return res
-    .status(200)
-    .json(new ApiResponse(200, req.user, "User fetched successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user: req.user,
+      },
+      "User fetched successfully"
+    )
+  );
 });
 
 // ==========================================
 // 🚀 7. UPDATE ACADEMIC PROFILE (ONBOARDING)
 // ==========================================
 const updateAcademicProfile = asyncHandler(async (req, res) => {
-  const user = await updateAcademicProfileService(
+  const { user } = await updateAcademicProfileService(
     req.user._id,
     req.user.userType,
     req.body
   );
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Academic profile updated"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user,
+      },
+      "Academic profile updated successfully"
+    )
+  );
 });
 
 // ==========================================
@@ -162,11 +161,14 @@ const updateAcademicProfile = asyncHandler(async (req, res) => {
 // ==========================================
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
-  const result = await updateUserAvatarService(req.user._id, avatarLocalPath);
+  const { avatarUrl } = await updateUserAvatarService(
+    req.user._id,
+    avatarLocalPath
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Avatar updated successfully"));
+    .json(new ApiResponse(200, { avatarUrl }, "Avatar updated successfully"));
 });
 
 // ==========================================
@@ -174,25 +176,37 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 // ==========================================
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
-  const result = await updateUserCoverImageService(
+  const { coverImageUrl } = await updateUserCoverImageService(
     req.user._id,
     coverImageLocalPath
   );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Cover image updated successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { coverImageUrl },
+        "Cover image updated successfully"
+      )
+    );
 });
 
 // ==========================================
 // 🚀 10. UPDATE GENERAL ACCOUNT DETAILS
 // ==========================================
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const user = await updateAccountDetailsService(req.user._id, req.body);
+  const { user } = await updateAccountDetailsService(req.user._id, req.body);
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Account details updated successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user,
+      },
+      "Account details updated successfully"
+    )
+  );
 });
 
 // ==========================================
@@ -200,23 +214,39 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 // ==========================================
 const getUserProfileHeader = asyncHandler(async (req, res) => {
   const { username } = req.params;
-  const data = await getUserProfileHeaderService(username, req.user?._id);
+  const { user, meta } = await getUserProfileHeaderService(
+    username,
+    req.user?._id
+  );
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, data, "User profile fetched successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user,
+        meta,
+      },
+      "User profile fetched successfully"
+    )
+  );
 });
 
 // ==========================================
-// � 12. GET USER DETAILS (Lightweight - No Relations/Stats)
+// 🚀 12. GET USER DETAILS (Lightweight - No Relations/Stats)
 // ==========================================
 const getUserDetails = asyncHandler(async (req, res) => {
   const { username } = req.params;
-  const user = await getUserDetailsService(username);
+  const { user } = await getUserDetailsService(username);
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User details fetched successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user,
+      },
+      "User details fetched successfully"
+    )
+  );
 });
 
 export {

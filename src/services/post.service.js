@@ -350,24 +350,25 @@ export const updatePostService = async (postId, userId, updateData) => {
   }
 
   // Update fields
-  let isChanged = false;
+  let isContentChanged = false;
+
   if (content !== undefined && content !== post.content) {
     post.content = content;
-    isChanged = true;
+    isContentChanged = true;
   }
   if (visibility !== undefined && visibility !== post.visibility) {
     post.visibility = visibility;
-    isChanged = true;
+    // Visibility change shouldn't mark post as edited
   }
   if (
     tags !== undefined &&
     JSON.stringify(tags) !== JSON.stringify(post.tags)
   ) {
     post.tags = tags;
-    isChanged = true;
+    isContentChanged = true;
   }
 
-  if (isChanged) {
+  if (isContentChanged) {
     post.isEdited = true;
     post.editedAt = new Date();
   }

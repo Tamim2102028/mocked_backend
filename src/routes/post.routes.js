@@ -4,7 +4,6 @@ import {
   createPost,
   toggleLikePost,
   toggleMarkAsRead,
-  getUserProfilePosts,
   getFeedPosts,
   deletePost,
   updatePost,
@@ -25,8 +24,5 @@ router.patch("/:postId", updatePost);
 
 // ✅ View/Read Toggle Route
 router.post("/:postId/toggle-read", toggleMarkAsRead);
-
-// Profile Posts
-router.get("/profile/:username", getUserProfilePosts);
 
 export default router;

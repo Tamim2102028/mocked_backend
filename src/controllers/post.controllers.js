@@ -7,7 +7,6 @@ import {
   createPostService,
   toggleLikePostService,
   toggleMarkAsReadService,
-  getUserProfilePostsService,
   deletePostService,
   updatePostService,
 } from "../services/post.service.js";
@@ -69,23 +68,6 @@ const toggleMarkAsRead = asyncHandler(async (req, res) => {
 });
 
 // =========================
-// 🚀 5. GET USER PROFILE POSTS (By Username)
-// =========================
-const getUserProfilePosts = asyncHandler(async (req, res) => {
-  const { username } = req.params;
-
-  const data = await getUserProfilePostsService(
-    username,
-    req.user?._id,
-    req.query
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, data, "User posts fetched successfully"));
-});
-
-// =========================
 // 🚀 6. DELETE POST (Soft Delete)
 // =========================
 const deletePost = asyncHandler(async (req, res) => {
@@ -116,7 +98,6 @@ export {
   getFeedPosts,
   toggleLikePost,
   toggleMarkAsRead,
-  getUserProfilePosts,
   deletePost,
   updatePost,
 };

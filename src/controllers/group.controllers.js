@@ -19,6 +19,8 @@ import {
   getInvitedGroupsService,
   getGroupDetailsService,
   getGroupMembersService,
+  getGroupFeedService,
+  createGroupPostService,
 } from "../services/group.service.js";
 
 // 1. CREATE GROUP
@@ -183,16 +185,35 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 
 // 9. GET GROUP FEED
 const getGroupFeed = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  const { posts, pagination } = await getGroupFeedService(
+    slug,
+    req.user._id,
+    page,
+    limit
+  );
+
   return res
     .status(200)
-    .json(new ApiResponse(200, { posts: [] }, "Group feed fetched"));
+    .json(new ApiResponse(200, { posts, pagination }, "Group feed fetched"));
 });
 
 // 10. CREATE GROUP POST
 const createGroupPost = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const postData = req.body;
+
+  const { post, meta } = await createGroupPostService(
+    slug,
+    req.user._id,
+    postData
+  );
+
   return res
     .status(201)
-    .json(new ApiResponse(201, { post: {} }, "Group post created"));
+    .json(new ApiResponse(201, { post, meta }, "Group post created"));
 });
 
 // 11. JOIN GROUP

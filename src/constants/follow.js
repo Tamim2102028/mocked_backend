@@ -3,4 +3,5 @@ export const FOLLOW_TARGET_MODELS = {
   DEPARTMENT: "Department",
   PAGE: "Page",
   USER: "User",
+  CHANNEL: "Channel",
 };

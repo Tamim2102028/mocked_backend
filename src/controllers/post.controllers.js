@@ -6,7 +6,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import {
   createPostService,
   toggleLikePostService,
-  addCommentService,
   toggleMarkAsReadService,
   getUserProfilePostsService,
   deletePostService,
@@ -51,19 +50,7 @@ const toggleLikePost = asyncHandler(async (req, res) => {
 });
 
 // =========================
-// 🚀 4. ADD COMMENT
-// =========================
-const addComment = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { content } = req.body;
-
-  const result = await addCommentService(postId, content, req.user);
-
-  return res.status(201).json(new ApiResponse(201, result, "Comment added"));
-});
-
-// =========================
-// 🚀 5. TOGGLE MARK AS READ
+// 🚀 4. TOGGLE MARK AS READ
 // =========================
 const toggleMarkAsRead = asyncHandler(async (req, res) => {
   const { postId } = req.params;
@@ -82,7 +69,7 @@ const toggleMarkAsRead = asyncHandler(async (req, res) => {
 });
 
 // =========================
-// 🚀 6. GET USER PROFILE POSTS (By Username)
+// 🚀 5. GET USER PROFILE POSTS (By Username)
 // =========================
 const getUserProfilePosts = asyncHandler(async (req, res) => {
   const { username } = req.params;
@@ -99,7 +86,7 @@ const getUserProfilePosts = asyncHandler(async (req, res) => {
 });
 
 // =========================
-// 🚀 7. DELETE POST (Soft Delete)
+// 🚀 6. DELETE POST (Soft Delete)
 // =========================
 const deletePost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
@@ -112,7 +99,7 @@ const deletePost = asyncHandler(async (req, res) => {
 });
 
 // =========================
-// 🚀 8. UPDATE POST
+// 🚀 7. UPDATE POST
 // =========================
 const updatePost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
@@ -128,7 +115,6 @@ export {
   createPost,
   getFeedPosts,
   toggleLikePost,
-  addComment,
   toggleMarkAsRead,
   getUserProfilePosts,
   deletePost,

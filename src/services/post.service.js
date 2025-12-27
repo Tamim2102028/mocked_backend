@@ -144,32 +144,6 @@ export const toggleLikePostService = async (postId, userId) => {
   };
 };
 
-// === Add Comment Service ===
-export const addCommentService = async (postId, content, user) => {
-  const newComment = await Comment.create({
-    content,
-    post: postId,
-    author: user._id,
-  });
-
-  const comment = await Comment.findById(newComment._id).populate(
-    "author",
-    "fullName userName avatar"
-  );
-
-  // Update post comments count
-  await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
-
-  return {
-    comment,
-    meta: {
-      isLiked: false,
-      isMine: true,
-      isEdited: false,
-    },
-  };
-};
-
 // === Toggle Mark as Read Service ===
 export const toggleMarkAsReadService = async (postId, userId) => {
   // Check if already read

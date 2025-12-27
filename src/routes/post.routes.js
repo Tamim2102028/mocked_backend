@@ -3,7 +3,6 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   createPost,
   toggleLikePost,
-  addComment,
   toggleMarkAsRead,
   getUserProfilePosts,
   getFeedPosts,
@@ -21,7 +20,6 @@ router.get("/feed", getFeedPosts);
 
 // Actions
 router.post("/:postId/toggle-like", toggleLikePost);
-router.post("/:postId/comments", addComment);
 router.delete("/:postId", deletePost);
 router.patch("/:postId", updatePost);
 

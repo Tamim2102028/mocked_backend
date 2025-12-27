@@ -226,7 +226,7 @@ export const updatePostService = async (postId, userId, updateData) => {
     JSON.stringify(tags) !== JSON.stringify(post.tags)
   ) {
     post.tags = tags;
-    isContentChanged = true;
+    // Tags change shouldn't mark post as edited
   }
 
   if (isContentChanged) {

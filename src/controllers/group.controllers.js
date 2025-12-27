@@ -256,11 +256,16 @@ const getGroupFeed = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  const result = await getGroupFeedService(slug, req.user._id, page, limit);
+  const { posts, pagination } = await getGroupFeedService(
+    slug,
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Group feed fetched"));
+    .json(new ApiResponse(200, { posts, pagination }, "Group feed fetched"));
 });
 
 // ==========================================
@@ -287,16 +292,12 @@ const createGroupPost = asyncHandler(async (req, res) => {
 const toggleGroupPostLike = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
-  const result = await toggleLikePostService(postId, req.user._id);
+  const { isLiked } = await toggleLikePostService(postId, req.user._id);
 
   return res
     .status(200)
     .json(
-      new ApiResponse(
-        200,
-        result,
-        result.isLiked ? "Post liked" : "Post unliked"
-      )
+      new ApiResponse(200, { isLiked }, isLiked ? "Post liked" : "Post unliked")
     );
 });
 
@@ -306,15 +307,15 @@ const toggleGroupPostLike = asyncHandler(async (req, res) => {
 const toggleGroupPostRead = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
-  const result = await toggleMarkAsReadService(postId, req.user._id);
+  const { isRead } = await toggleMarkAsReadService(postId, req.user._id);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        result,
-        result.isRead ? "Marked as read" : "Marked as unread"
+        { isRead },
+        isRead ? "Marked as read" : "Marked as unread"
       )
     );
 });
@@ -325,11 +326,20 @@ const toggleGroupPostRead = asyncHandler(async (req, res) => {
 const deleteGroupPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
-  const result = await deletePostService(postId, req.user._id);
+  const { postId: deletedPostId } = await deletePostService(
+    postId,
+    req.user._id
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Post deleted successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { postId: deletedPostId },
+        "Post deleted successfully"
+      )
+    );
 });
 
 // ==========================================
@@ -338,11 +348,15 @@ const deleteGroupPost = asyncHandler(async (req, res) => {
 const updateGroupPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
-  const updatedPost = await updatePostService(postId, req.user._id, req.body);
+  const { post, meta } = await updatePostService(
+    postId,
+    req.user._id,
+    req.body
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, updatedPost, "Post updated successfully"));
+    .json(new ApiResponse(200, { post, meta }, "Post updated successfully"));
 });
 
 // ==========================================
@@ -352,7 +366,7 @@ const getGroupPostComments = asyncHandler(async (req, res) => {
   const { postId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  const result = await getPostCommentsService(
+  const { comments, pagination } = await getPostCommentsService(
     postId,
     page,
     limit,
@@ -361,7 +375,13 @@ const getGroupPostComments = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Comments fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { comments, pagination },
+        "Comments fetched successfully"
+      )
+    );
 });
 
 // ==========================================
@@ -375,11 +395,17 @@ const createGroupPostComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Comment content is required");
   }
 
-  const result = await addCommentService(postId, content, req.user._id);
+  const { comment, meta } = await addCommentService(
+    postId,
+    content,
+    req.user._id
+  );
 
   return res
     .status(201)
-    .json(new ApiResponse(201, result, "Comment added successfully"));
+    .json(
+      new ApiResponse(201, { comment, meta }, "Comment added successfully")
+    );
 });
 
 // ==========================================
@@ -388,11 +414,20 @@ const createGroupPostComment = asyncHandler(async (req, res) => {
 const deleteGroupPostComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
 
-  const result = await deleteCommentService(commentId, req.user._id);
+  const { commentId: deletedCommentId } = await deleteCommentService(
+    commentId,
+    req.user._id
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Comment deleted successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { commentId: deletedCommentId },
+        "Comment deleted successfully"
+      )
+    );
 });
 
 // ==========================================
@@ -406,11 +441,17 @@ const updateGroupPostComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Content is required");
   }
 
-  const result = await updateCommentService(commentId, content, req.user._id);
+  const { comment, meta } = await updateCommentService(
+    commentId,
+    content,
+    req.user._id
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Comment updated successfully"));
+    .json(
+      new ApiResponse(200, { comment, meta }, "Comment updated successfully")
+    );
 });
 
 // ==========================================
@@ -419,11 +460,17 @@ const updateGroupPostComment = asyncHandler(async (req, res) => {
 const toggleGroupPostCommentLike = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
 
-  const result = await toggleCommentLikeService(commentId, req.user._id);
+  const { isLiked } = await toggleCommentLikeService(commentId, req.user._id);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Comment like toggled"));
+    .json(
+      new ApiResponse(
+        200,
+        { isLiked },
+        isLiked ? "Comment liked" : "Comment unliked"
+      )
+    );
 });
 
 export {

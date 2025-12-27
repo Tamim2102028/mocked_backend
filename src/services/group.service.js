@@ -940,7 +940,7 @@ const createGroupPostService = async (slug, userId, postData) => {
   // 6. Update Group Stats
   await Group.findByIdAndUpdate(group._id, { $inc: { postsCount: 1 } });
 
-  return { formattedPost };
+  return formattedPost;
 };
 
 export {

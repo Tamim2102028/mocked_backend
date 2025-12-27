@@ -33,21 +33,28 @@ const getCrFeed = asyncHandler(async (req, res) => {
   // I'll stick to a placeholder or try to get it from request.
   // Since I don't have the full context of how CR corner is structured, I'll assume `req.params.crCornerId` or fall back to user's dept.
   // But to be safe and compatible with previous code which took no params, I'll check if I can get it from user.
-  
+
   const crCornerId = req.user.academicInfo?.department || "section_a"; // Fallback to what was there implicitly
   const { page = 1, limit = 10 } = req.query;
 
-  const result = await getCrFeedService(crCornerId, req.user._id, page, limit);
+  const { posts, pagination } = await getCrFeedService(
+    crCornerId,
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "CR Corner feed fetched"));
+    .json(
+      new ApiResponse(200, { posts, pagination }, "CR Corner feed fetched")
+    );
 });
 
 // 🚀 2. CREATE CR NOTICE
 const createCrPost = asyncHandler(async (req, res) => {
   const { content } = req.body;
-  
+
   // Previous implementation: postOnId: req.user.academicInfo?.department || "dept_id"
   const crCornerId = req.user.academicInfo?.department || "section_a";
 
@@ -59,11 +66,11 @@ const createCrPost = asyncHandler(async (req, res) => {
     ...req.body,
   };
 
-  const formattedPost = await createPostService(postData, req.user._id);
+  const { post, meta } = await createPostService(postData, req.user._id);
 
   return res
     .status(201)
-    .json(new ApiResponse(201, formattedPost, "Notice posted in CR Corner"));
+    .json(new ApiResponse(201, { post, meta }, "Notice posted in CR Corner"));
 });
 
 // ==========================================

@@ -23,11 +23,16 @@ const getDeptFeed = asyncHandler(async (req, res) => {
   const { deptId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  const result = await getDeptFeedService(deptId, req.user._id, page, limit);
+  const { posts, pagination } = await getDeptFeedService(
+    deptId,
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, result, "Dept feed fetched"));
+    .json(new ApiResponse(200, { posts, pagination }, "Dept feed fetched"));
 });
 
 // 🚀 2. CREATE DEPT POST (Only for Admin/Head)
@@ -45,11 +50,11 @@ const createDeptPost = asyncHandler(async (req, res) => {
     ...req.body,
   };
 
-  const formattedPost = await createPostService(postData, req.user._id);
+  const { post, meta } = await createPostService(postData, req.user._id);
 
   return res
     .status(201)
-    .json(new ApiResponse(201, formattedPost, "Official notice posted"));
+    .json(new ApiResponse(201, { post, meta }, "Official notice posted"));
 });
 
 // 🚀 3. GET DEPT DETAILS

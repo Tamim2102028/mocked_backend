@@ -91,14 +91,8 @@ export const createPostService = async (postData, authorId) => {
 
   // Format response
   const formattedPost = {
-    ...populatedPost.toObject(),
-    attachments: populatedPost.attachments || [],
-    stats: {
-      likes: populatedPost.likesCount || 0,
-      comments: populatedPost.commentsCount || 0,
-      shares: populatedPost.sharesCount || 0,
-    },
-    context: {
+    post: populatedPost,
+    meta: {
       isLiked: false,
       isSaved: false,
       isMine: true,
@@ -152,22 +146,28 @@ export const toggleLikePostService = async (postId, userId) => {
 
 // === Add Comment Service ===
 export const addCommentService = async (postId, content, user) => {
-  const comment = {
-    _id: new mongoose.Types.ObjectId().toString(),
-    post: postId,
+  const newComment = await Comment.create({
     content,
-    author: {
-      _id: user._id,
-      fullName: user.fullName,
-      userName: user.userName,
-      avatar: user.avatar,
-    },
-    stats: { likes: 0, replies: 0 },
-    parentId: null,
-    createdAt: new Date().toISOString(),
-  };
+    post: postId,
+    author: user._id,
+  });
 
-  return comment;
+  const comment = await Comment.findById(newComment._id).populate(
+    "author",
+    "fullName userName avatar"
+  );
+
+  // Update post comments count
+  await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
+
+  return {
+    comment,
+    meta: {
+      isLiked: false,
+      isMine: true,
+      isEdited: false,
+    },
+  };
 };
 
 // === Toggle Mark as Read Service ===
@@ -287,27 +287,6 @@ export const getUserProfilePostsService = async (
   let likedPostIds = new Set();
   const postIds = posts.map((p) => p._id);
 
-  // Get real-time comment counts
-  const commentCounts = await Comment.aggregate([
-    {
-      $match: {
-        post: { $in: postIds },
-        isDeleted: false,
-      },
-    },
-    {
-      $group: {
-        _id: "$post",
-        count: { $sum: 1 },
-      },
-    },
-  ]);
-
-  const commentCountMap = {};
-  commentCounts.forEach((c) => {
-    commentCountMap[c._id.toString()] = c.count;
-  });
-
   if (currentUserId && posts.length > 0) {
     // Fetch read status
     const viewedPosts = await PostRead.find({
@@ -329,20 +308,13 @@ export const getUserProfilePostsService = async (
 
   // Format posts with context
   const postsWithContext = posts.map((post) => ({
-    ...post,
-    stats: {
-      likes: post.likesCount || 0,
-      comments: commentCountMap[post._id.toString()] || 0,
-      shares: post.sharesCount || 0,
-    },
-    context: {
+    post,
+    meta: {
       isLiked: likedPostIds.has(post._id.toString()),
       isSaved: false, // TODO: Check if currentUser saved this post
       isMine: isOwnProfile,
       isRead: viewedPostIds.has(post._id.toString()),
     },
-    isEdited: post.isEdited || false,
-    editedAt: post.editedAt,
   }));
 
   // Count total documents for pagination
@@ -429,10 +401,25 @@ export const updatePostService = async (postId, userId, updateData) => {
   await post.save();
 
   // Return updated post with author details
-  const updatedPost = await Post.findById(postId).populate(
+  const updatedPostObj = await Post.findById(postId).populate(
     "author",
     "fullName avatar userName"
   );
 
-  return updatedPost;
+  // Check like status
+  const existingReaction = await Reaction.findOne({
+    targetId: postId,
+    targetModel: REACTION_TARGET_MODELS.POST,
+    user: userId,
+  });
+
+  return {
+    post: updatedPostObj,
+    meta: {
+      isLiked: !!existingReaction,
+      isSaved: false,
+      isMine: true,
+      isRead: true,
+    },
+  };
 };

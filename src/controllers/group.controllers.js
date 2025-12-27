@@ -2,7 +2,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { Group } from "../models/group.model.js";
-import { createGroupService } from "../services/group.service.js";
+import {
+  createGroupService,
+  leaveGroupService,
+} from "../services/group.service.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 
 import { GroupMembership } from "../models/groupMembership.model.js";
@@ -547,9 +550,13 @@ const rejectJoinRequest = asyncHandler(async (req, res) => {
 
 // 15. LEAVE GROUP
 const leaveGroup = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+
+  const result = await leaveGroupService(groupId, req.user._id);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, { status: "LEFT" }, "Left group successfully"));
+    .json(new ApiResponse(200, result, "Left group successfully"));
 });
 
 export {

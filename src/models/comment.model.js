@@ -1,5 +1,4 @@
 import mongoose, { Schema } from "mongoose";
-import { Post } from "./post.model.js";
 
 const commentSchema = new Schema(
   {
@@ -13,11 +12,14 @@ const commentSchema = new Schema(
     },
     author: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
+    // Stats
     likesCount: { type: Number, default: 0 },
 
-    isDeleted: { type: Boolean, default: false },
+    // Edit status
     isEdited: { type: Boolean, default: false },
     editedAt: { type: Date },
+
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

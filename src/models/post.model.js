@@ -85,12 +85,14 @@ const postSchema = new Schema(
     commentsCount: { type: Number, default: 0 },
     sharesCount: { type: Number, default: 0 },
 
+    // edited status
+    isEdited: { type: Boolean, default: false },
+    editedAt: { type: Date },
+
     // Flags
     isArchived: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
-    isEdited: { type: Boolean, default: false },
-    editedAt: { type: Date },
   },
   { timestamps: true }
 );

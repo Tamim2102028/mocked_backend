@@ -85,4 +85,42 @@ const createGroupService = async ({
   return group;
 };
 
-export { createGroupService };
+// === Leave Group Service ===
+const leaveGroupService = async (groupId, userId) => {
+  // 1. Check if group exists
+  const group = await Group.findById(groupId);
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  // 2. Check membership
+  const membership = await GroupMembership.findOne({
+    group: groupId,
+    user: userId,
+  });
+
+  if (!membership) {
+    throw new ApiError(404, "You are not a member of this group");
+  }
+
+  // 3. Check if Owner
+  if (membership.role === GROUP_ROLES.OWNER) {
+    throw new ApiError(
+      400,
+      "Owner cannot leave the group. Please transfer ownership first."
+    );
+  }
+
+  // 4. Remove membership (Admin or Member)
+  // If Admin leaves, they lose admin rights automatically as membership is gone
+  await GroupMembership.findByIdAndDelete(membership._id);
+
+  // 5. Decrement member count
+  await Group.findByIdAndUpdate(groupId, {
+    $inc: { membersCount: -1 },
+  });
+
+  return { groupId, status: "LEFT" };
+};
+
+export { createGroupService, leaveGroupService };

@@ -21,9 +21,7 @@ const createPost = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(
-      new ApiResponse(201, { post: formattedPost }, "Post created successfully")
-    );
+    .json(new ApiResponse(201, formattedPost, "Post created successfully"));
 });
 
 // =========================
@@ -59,11 +57,9 @@ const addComment = asyncHandler(async (req, res) => {
   const { postId } = req.params;
   const { content } = req.body;
 
-  const comment = await addCommentService(postId, content, req.user);
+  const result = await addCommentService(postId, content, req.user);
 
-  return res
-    .status(201)
-    .json(new ApiResponse(201, { comment }, "Comment added"));
+  return res.status(201).json(new ApiResponse(201, result, "Comment added"));
 });
 
 // =========================

@@ -541,28 +541,21 @@ const getUserProfileHeader = asyncHandler(async (req, res) => {
   });
 
   const userProfileHeader = {
-    _id: user._id,
-    userName: user.userName,
-    fullName: user.fullName,
-    avatar: user.avatar,
-    coverImage: user.coverImage,
-    bio: user.bio,
-    userType: user.userType,
-    institution: user.institution,
-    academicInfo: user.academicInfo,
-    profile_relation_status: relationStatus,
-    isFollowing,
-    isBlockedByMe,
-    isBlockedByTarget,
-    // Stats
-    stats: {
-      postsCount: postsCount,
-      friendsCount: realConnectionsCount,
-      followersCount: realFollowersCount,
-      followingCount: realFollowingCount,
-      publicFilesCount: 7, // TODO: Implement Files
+    user,
+    meta: {
+      profile_relation_status: relationStatus,
+      isFollowing,
+      isBlockedByMe,
+      isBlockedByTarget,
+      isOwnProfile: isSelf,
+      stats: {
+        postsCount: postsCount,
+        friendsCount: realConnectionsCount,
+        followersCount: realFollowersCount,
+        followingCount: realFollowingCount,
+        publicFilesCount: 7, // TODO: Implement Files
+      },
     },
-    isOwnProfile: isSelf,
   };
 
   return res

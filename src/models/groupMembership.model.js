@@ -47,6 +47,10 @@ const groupMembershipSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+
+    joinedAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

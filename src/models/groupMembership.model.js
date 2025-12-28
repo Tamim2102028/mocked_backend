@@ -32,7 +32,6 @@ const groupMembershipSchema = new Schema(
     status: {
       type: String,
       enum: Object.values(GROUP_MEMBERSHIP_STATUS),
-      default: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
       index: true,
     },
 

@@ -18,7 +18,6 @@ export const GROUP_ROLES = {
 };
 
 export const GROUP_MEMBERSHIP_STATUS = {
-  NOT_JOINED: "NOT_JOINED",
   JOINED: "JOINED",
   PENDING: "PENDING",
   INVITED: "INVITED",

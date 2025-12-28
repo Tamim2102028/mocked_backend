@@ -276,7 +276,7 @@ const groupActions = {
     }
 
     return {
-      status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      status: null,
     };
   },
 
@@ -353,7 +353,7 @@ const groupActions = {
       throw new ApiError(404, "No pending request found to cancel");
     }
 
-    return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
+    return { status: null };
   },
 
   acceptJoinRequestService: async (groupId, adminId, targetUserId) => {
@@ -430,7 +430,7 @@ const groupActions = {
     // 4. Reject (Delete) Request
     await GroupMembership.findByIdAndDelete(membership._id);
 
-    return { status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED };
+    return { status: null };
   },
 
   removeMemberService: async (groupId, memberId, adminId) => {
@@ -676,9 +676,7 @@ const groupServices = {
     const groups = groupsData.map((group) => ({
       group,
       meta: {
-        status:
-          statusByGroupId.get(group._id.toString()) ??
-          GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+        status: statusByGroupId.get(group._id.toString()) ?? null,
       },
     }));
 
@@ -754,9 +752,7 @@ const groupServices = {
     const groups = groupsData.map((group) => ({
       group,
       meta: {
-        status:
-          statusByGroupId.get(group._id.toString()) ??
-          GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+        status: statusByGroupId.get(group._id.toString()) ?? null,
       },
     }));
 
@@ -786,7 +782,6 @@ const groupServices = {
       GroupMembership.distinct("group", {
         user: userId,
         isDeleted: { $ne: true },
-        status: { $ne: GROUP_MEMBERSHIP_STATUS.NOT_JOINED },
       }),
       GroupMembership.distinct("group", {
         user: userId,
@@ -815,15 +810,11 @@ const groupServices = {
       Group.countDocuments(query),
     ]);
 
-    // All returned groups are NOT_JOINED by definition
-    const groups = groupsData.map((group) => {
-      return {
-        group,
-        meta: {
-          status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
-        },
-      };
-    });
+    // All returned groups have no membership for this user by definition
+    const groups = groupsData.map((group) => ({
+      group,
+      meta: { status: null },
+    }));
 
     const totalPages = Math.ceil(totalDocs / parsedLimit);
     const hasNextPage = parsedPage < totalPages;
@@ -955,9 +946,7 @@ const groupServices = {
       isDeleted: { $ne: true },
     }).lean();
 
-    const status = membership
-      ? membership.status
-      : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
+    const status = membership ? membership.status : null;
 
     // Metadata
     const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;

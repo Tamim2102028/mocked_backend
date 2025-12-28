@@ -427,13 +427,14 @@ const revokeAdminService = async (groupId, memberId, ownerId) => {
 const getMyGroupsService = async (userId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
-  // Find groups where the user is a member (JOINED)
+  // Find groups where the user is a member (JOINED) AND membership is NOT deleted
   const memberships = await GroupMembership.find({
     user: userId,
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    isDeleted: { $ne: true },
   })
-    .sort({ createdAt: -1 }) // Sort by joined date (descending)
-    .select("group status role")
+    .sort({ createdAt: -1 })
+    .select("group status")
     .skip(skip)
     .limit(Number(limit))
     .populate({
@@ -446,6 +447,7 @@ const getMyGroupsService = async (userId, page = 1, limit = 10) => {
   const totalDocs = await GroupMembership.countDocuments({
     user: userId,
     status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    isDeleted: { $ne: true },
   });
 
   const totalPages = Math.ceil(totalDocs / limit);
@@ -456,7 +458,6 @@ const getMyGroupsService = async (userId, page = 1, limit = 10) => {
   const groups = memberships.map((membership) => {
     const group = membership.group;
     const status = membership.status;
-    const role = membership.role;
 
     return {
       group: {
@@ -492,9 +493,19 @@ const getMyGroupsService = async (userId, page = 1, limit = 10) => {
 const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
+  // 1. Get Banned Group IDs (to exclude them)
+  const bannedMemberships = await GroupMembership.find({
+    user: userId,
+    status: GROUP_MEMBERSHIP_STATUS.BANNED,
+  }).select("group");
+
+  const bannedGroupIds = bannedMemberships.map((m) => m.group);
+
+  // 2. Find Groups (Excluding Banned & Deleted)
   const groupsData = await Group.find({
     type: GROUP_TYPES.OFFICIAL_INSTITUTION,
     isDeleted: { $ne: true },
+    _id: { $nin: bannedGroupIds },
   })
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -503,24 +514,20 @@ const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
 
   const groupIds = groupsData.map((g) => g._id);
 
-  const memberships = await GroupMembership.find({
+  // 3. Get Membership Status for these groups
+  const myMemberships = await GroupMembership.find({
     user: userId,
     group: { $in: groupIds },
   }).lean();
 
+  // 4. Format Response
   const groups = groupsData.map((group) => {
-    const membership = memberships.find(
+    const membership = myMemberships.find(
       (m) => m.group.toString() === group._id.toString()
     );
     const status = membership
       ? membership.status
       : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
-
-    const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
-    const isAdmin =
-      membership?.role === "ADMIN" || membership?.role === "OWNER";
-    const isOwner = membership?.role === GROUP_ROLES.OWNER;
-    const isModerator = membership?.role === GROUP_ROLES.MODERATOR;
 
     return {
       group,
@@ -530,8 +537,11 @@ const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
     };
   });
 
+  // 5. Count Total (Excluding Banned)
   const totalDocs = await Group.countDocuments({
     type: GROUP_TYPES.OFFICIAL_INSTITUTION,
+    isDeleted: { $ne: true },
+    _id: { $nin: bannedGroupIds },
   });
 
   const totalPages = Math.ceil(totalDocs / limit);
@@ -554,9 +564,19 @@ const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
 const getCareerGroupsService = async (userId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
+  // 1. Get Banned Group IDs
+  const bannedMemberships = await GroupMembership.find({
+    user: userId,
+    status: GROUP_MEMBERSHIP_STATUS.BANNED,
+  }).select("group");
+
+  const bannedGroupIds = bannedMemberships.map((m) => m.group);
+
+  // 2. Find Groups (Excluding Banned & Deleted)
   const groupsData = await Group.find({
     type: GROUP_TYPES.JOBS_CAREERS,
     isDeleted: { $ne: true },
+    _id: { $nin: bannedGroupIds },
   })
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -565,11 +585,13 @@ const getCareerGroupsService = async (userId, page = 1, limit = 10) => {
 
   const groupIds = groupsData.map((g) => g._id);
 
+  // 3. Get Membership Status
   const memberships = await GroupMembership.find({
     user: userId,
     group: { $in: groupIds },
   }).lean();
 
+  // 4. Format Response
   const groups = groupsData.map((group) => {
     const membership = memberships.find(
       (m) => m.group.toString() === group._id.toString()
@@ -577,12 +599,6 @@ const getCareerGroupsService = async (userId, page = 1, limit = 10) => {
     const status = membership
       ? membership.status
       : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
-
-    const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
-    const isAdmin =
-      membership?.role === "ADMIN" || membership?.role === "OWNER";
-    const isOwner = membership?.role === GROUP_ROLES.OWNER;
-    const isModerator = membership?.role === GROUP_ROLES.MODERATOR;
 
     return {
       group,
@@ -592,8 +608,11 @@ const getCareerGroupsService = async (userId, page = 1, limit = 10) => {
     };
   });
 
+  // 5. Count Total
   const totalDocs = await Group.countDocuments({
     type: GROUP_TYPES.JOBS_CAREERS,
+    isDeleted: { $ne: true },
+    _id: { $nin: bannedGroupIds },
   });
 
   const totalPages = Math.ceil(totalDocs / limit);
@@ -1025,6 +1044,9 @@ const deleteGroupService = async (groupId, userId) => {
     deletedAt: new Date(),
     deletedBy: userId,
   });
+
+  // 4. Soft Delete All Memberships
+  await GroupMembership.updateMany({ group: groupId }, { isDeleted: true });
 
   return { groupId };
 };

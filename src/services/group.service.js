@@ -14,6 +14,7 @@ import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 import { Post } from "../models/post.model.js";
 import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
+import { Comment } from "../models/comment.model.js";
 import { createPostService } from "./post.service.js";
 
 const createGroupService = async (
@@ -1047,6 +1048,24 @@ const deleteGroupService = async (groupId, userId) => {
 
   // 4. Soft Delete All Memberships
   await GroupMembership.updateMany({ group: groupId }, { isDeleted: true });
+
+  // 5. Find all posts of this group
+  const groupPosts = await Post.find({
+    postOnModel: POST_TARGET_MODELS.GROUP,
+    postOnId: groupId,
+    isDeleted: false,
+  }).select("_id");
+
+  const postIds = groupPosts.map((p) => p._id);
+
+  // 6. Soft Delete All Posts and their Comments
+  if (postIds.length > 0) {
+    // Soft delete posts
+    await Post.updateMany({ _id: { $in: postIds } }, { isDeleted: true });
+
+    // Soft delete comments
+    await Comment.updateMany({ post: { $in: postIds } }, { isDeleted: true });
+  }
 
   return { groupId };
 };

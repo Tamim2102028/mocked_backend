@@ -2,27 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import {
-  createGroupService,
-  getMyGroupsService,
-  getUniversityGroupsService,
-  getCareerGroupsService,
-  getSuggestedGroupsService,
-  getSentRequestsGroupsService,
-  getInvitedGroupsService,
-  joinGroupService,
-  leaveGroupService,
-  cancelJoinRequestService,
-  acceptJoinRequestService,
-  rejectJoinRequestService,
-  getGroupDetailsService,
-  getGroupMembersService,
-  removeMemberService,
-  assignAdminService,
-  revokeAdminService,
-  getGroupFeedService,
-  createGroupPostService,
-  deleteGroupService,
-  inviteMembersService,
+  groupServices,
+  groupActions,
 } from "../services/group.service.js";
 import {
   toggleLikePostService,
@@ -45,7 +26,7 @@ const createGroup = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
-  const { group, meta } = await createGroupService(
+  const { group, meta } = await groupActions.createGroupService(
     req.body,
     req.user._id,
     avatarLocalPath,
@@ -61,7 +42,7 @@ const createGroup = asyncHandler(async (req, res) => {
 // 🚀 2. GET MY GROUPS
 // ==========================================
 const getMyGroups = asyncHandler(async (req, res) => {
-  const groups = await getMyGroupsService(req.user._id);
+  const groups = await groupServices.getMyGroupsService(req.user._id);
 
   return res
     .status(200)
@@ -72,7 +53,7 @@ const getMyGroups = asyncHandler(async (req, res) => {
 // 🚀 3. GET UNIVERSITY GROUPS
 // ==========================================
 const getUniversityGroups = asyncHandler(async (req, res) => {
-  const groups = await getUniversityGroupsService(req.user._id);
+  const groups = await groupServices.getUniversityGroupsService(req.user._id);
 
   return res
     .status(200)
@@ -85,7 +66,7 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
 // 🚀 4. GET CAREER GROUPS
 // ==========================================
 const getCareerGroups = asyncHandler(async (req, res) => {
-  const groups = await getCareerGroupsService(req.user._id);
+  const groups = await groupServices.getCareerGroupsService(req.user._id);
 
   return res
     .status(200)
@@ -96,7 +77,7 @@ const getCareerGroups = asyncHandler(async (req, res) => {
 // 🚀 5. GET SUGGESTED GROUPS
 // ==========================================
 const getSuggestedGroups = asyncHandler(async (req, res) => {
-  const groups = await getSuggestedGroupsService(req.user._id);
+  const groups = await groupServices.getSuggestedGroupsService(req.user._id);
 
   return res
     .status(200)
@@ -110,7 +91,7 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
 // ==========================================
 const deleteGroup = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { groupId: deletedGroupId } = await deleteGroupService(
+  const { groupId: deletedGroupId } = await groupActions.deleteGroupService(
     groupId,
     req.user._id
   );
@@ -141,7 +122,7 @@ const inviteMembers = asyncHandler(async (req, res) => {
     throw new ApiError(400, "targetUserIds array is required");
   }
 
-  const { results } = await inviteMembersService(
+  const { results } = await groupActions.inviteMembersService(
     groupId,
     req.user._id,
     targetUserIds
@@ -156,7 +137,7 @@ const inviteMembers = asyncHandler(async (req, res) => {
 // 🚀 4. GET MY GROUPS
 // ==========================================
 const getSentRequestsGroups = asyncHandler(async (req, res) => {
-  const groups = await getSentRequestsGroupsService(req.user._id);
+  const groups = await groupServices.getSentRequestsGroupsService(req.user._id);
 
   return res
     .status(200)
@@ -167,7 +148,7 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
 // 🚀 7. GET INVITED GROUPS
 // ==========================================
 const getInvitedGroups = asyncHandler(async (req, res) => {
-  const { groups, pagination } = await getInvitedGroupsService(req.user._id);
+  const { groups, pagination } = await groupServices.getInvitedGroupsService(req.user._id);
 
   return res
     .status(200)
@@ -185,7 +166,7 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
 // ==========================================
 const joinGroup = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { status } = await joinGroupService(groupId, req.user._id);
+  const { status } = await groupActions.joinGroupService(groupId, req.user._id);
 
   return res
     .status(200)
@@ -197,7 +178,7 @@ const joinGroup = asyncHandler(async (req, res) => {
 // ==========================================
 const leaveGroup = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { status } = await leaveGroupService(groupId, req.user._id);
+  const { status } = await groupActions.leaveGroupService(groupId, req.user._id);
 
   return res
     .status(200)
@@ -209,7 +190,7 @@ const leaveGroup = asyncHandler(async (req, res) => {
 // ==========================================
 const cancelJoinRequest = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { status } = await cancelJoinRequestService(groupId, req.user._id);
+  const { status } = await groupActions.cancelJoinRequestService(groupId, req.user._id);
 
   return res
     .status(200)
@@ -225,7 +206,7 @@ const acceptJoinRequest = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
   const { userId } = req.body;
 
-  const { status } = await acceptJoinRequestService(
+  const { status } = await groupActions.acceptJoinRequestService(
     groupId,
     req.user._id,
     userId
@@ -243,7 +224,7 @@ const rejectJoinRequest = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
   const { userId } = req.body;
 
-  const { status } = await rejectJoinRequestService(
+  const { status } = await groupActions.rejectJoinRequestService(
     groupId,
     req.user._id,
     userId
@@ -259,7 +240,7 @@ const rejectJoinRequest = asyncHandler(async (req, res) => {
 // ==========================================
 const getGroupDetails = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const { group, meta } = await getGroupDetailsService(slug, req.user._id);
+  const { group, meta } = await groupServices.getGroupDetailsService(slug, req.user._id);
 
   return res
     .status(200)
@@ -277,7 +258,7 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { members, pagination } = await getGroupMembersService(
+  const { members, pagination } = await groupServices.getGroupMembersService(
     groupId,
     req.user._id
   );
@@ -298,7 +279,7 @@ const getGroupMembers = asyncHandler(async (req, res) => {
 // ==========================================
 const removeMember = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const { memberId } = await removeMemberService(groupId, userId, req.user._id);
+  const { memberId } = await groupActions.removeMemberService(groupId, userId, req.user._id);
 
   return res
     .status(200)
@@ -310,7 +291,7 @@ const removeMember = asyncHandler(async (req, res) => {
 // ==========================================
 const assignAdmin = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const { role } = await assignAdminService(groupId, userId, req.user._id);
+  const { role } = await groupActions.assignAdminService(groupId, userId, req.user._id);
 
   return res
     .status(200)
@@ -322,7 +303,7 @@ const assignAdmin = asyncHandler(async (req, res) => {
 // ==========================================
 const revokeAdmin = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const { role } = await revokeAdminService(groupId, userId, req.user._id);
+  const { role } = await groupActions.revokeAdminService(groupId, userId, req.user._id);
 
   return res
     .status(200)
@@ -336,7 +317,7 @@ const getGroupFeed = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
-  const { posts, pagination } = await getGroupFeedService(
+  const { posts, pagination } = await groupServices.getGroupFeedService(
     groupId,
     req.user._id,
     page,
@@ -355,7 +336,7 @@ const createGroupPost = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
   const postData = req.body;
 
-  const { post, meta } = await createGroupPostService(
+  const { post, meta } = await groupActions.createGroupPostService(
     groupId,
     req.user._id,
     postData

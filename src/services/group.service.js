@@ -472,8 +472,6 @@ const getMyGroupsService = async (userId, page = 1, limit = 10) => {
       },
       meta: {
         status,
-        isMember: status === GROUP_MEMBERSHIP_STATUS.JOINED,
-        isAdmin: role === "ADMIN" || role === "OWNER",
       },
     };
   });
@@ -521,13 +519,13 @@ const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
     const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
     const isAdmin =
       membership?.role === "ADMIN" || membership?.role === "OWNER";
+    const isOwner = membership?.role === GROUP_ROLES.OWNER;
+    const isModerator = membership?.role === GROUP_ROLES.MODERATOR;
 
     return {
       group,
       meta: {
         status,
-        isMember,
-        isAdmin,
       },
     };
   });
@@ -583,13 +581,13 @@ const getCareerGroupsService = async (userId, page = 1, limit = 10) => {
     const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
     const isAdmin =
       membership?.role === "ADMIN" || membership?.role === "OWNER";
+    const isOwner = membership?.role === GROUP_ROLES.OWNER;
+    const isModerator = membership?.role === GROUP_ROLES.MODERATOR;
 
     return {
       group,
       meta: {
         status,
-        isMember,
-        isAdmin,
       },
     };
   });
@@ -642,14 +640,14 @@ const getSuggestedGroupsService = async (userId, page = 1, limit = 10) => {
     .lean();
 
   // All returned groups are NOT_JOINED by definition
-  const groups = groupsData.map((group) => ({
-    group,
-    meta: {
-      status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
-      isMember: false,
-      isAdmin: false,
-    },
-  }));
+  const groups = groupsData.map((group) => {
+    return {
+      group,
+      meta: {
+        status: GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      },
+    };
+  });
 
   const totalDocs = await Group.countDocuments(query);
 
@@ -694,12 +692,11 @@ const getSentRequestsGroupsService = async (userId, page = 1, limit = 10) => {
 
   const groups = memberships.map((m) => {
     const groupObj = m.group.toObject ? m.group.toObject() : m.group;
+
     return {
       group: groupObj,
       meta: {
         status: GROUP_MEMBERSHIP_STATUS.PENDING,
-        isMember: false,
-        isAdmin: false,
       },
     };
   });
@@ -741,12 +738,11 @@ const getInvitedGroupsService = async (userId, page = 1, limit = 10) => {
 
   const groups = memberships.map((m) => {
     const groupObj = m.group.toObject ? m.group.toObject() : m.group;
+
     return {
       group: groupObj,
       meta: {
         status: GROUP_MEMBERSHIP_STATUS.INVITED,
-        isMember: false,
-        isAdmin: false,
       },
     };
   });

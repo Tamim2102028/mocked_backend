@@ -8,6 +8,7 @@ import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { Comment } from "../models/comment.model.js";
 import { Friendship } from "../models/friendship.model.js";
+import { Group } from "../models/group.model.js";
 import {
   POST_TARGET_MODELS,
   POST_TYPES,
@@ -218,10 +219,6 @@ export const deletePostService = async (postId, userId) => {
     throw new ApiError(403, "You are not authorized to delete this post");
   }
 
-  // Soft delete post
-  post.isDeleted = true;
-  await post.save();
-
   // 1. Soft delete all comments of this post
   const comments = await Comment.find({ post: postId });
   const commentIds = comments.map((c) => c._id);
@@ -245,6 +242,24 @@ export const deletePostService = async (postId, userId) => {
     targetId: postId,
     targetModel: REACTION_TARGET_MODELS.POST,
   });
+
+  // 4. If post was on a Group, decrement group's postsCount
+  if (post.postOnModel === POST_TARGET_MODELS.GROUP && post.postOnId) {
+    try {
+      await Group.findByIdAndUpdate(post.postOnId, {
+        $inc: { postsCount: -1 },
+      });
+    } catch (error) {
+      throw new ApiError(
+        500,
+        `${error}` || "Failed to update group's posts count"
+      );
+    }
+  }
+
+  // Soft delete post
+  post.isDeleted = true;
+  await post.save();
 
   return { postId };
 };

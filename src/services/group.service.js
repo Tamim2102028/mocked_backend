@@ -622,83 +622,76 @@ const groupServices = {
   },
 
   getUniversityGroupsService: async (userId, page = 1, limit = 10) => {
-    const skip = (page - 1) * limit;
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    // 1. Get Banned Group IDs (to exclude them)
-    const bannedMemberships = await GroupMembership.find({
-      user: userId,
-      status: GROUP_MEMBERSHIP_STATUS.BANNED,
-    }).select("group");
+    const [bannedGroupIds, joinedGroupIds] = await Promise.all([
+      GroupMembership.distinct("group", {
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.BANNED,
+      }),
+      GroupMembership.distinct("group", {
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.JOINED,
+        isDeleted: { $ne: true },
+      }),
+    ]);
 
-    const bannedGroupIds = bannedMemberships.map((m) => m.group);
-
-    // 2. Get Joined Group IDs (to include Private/Closed groups if member)
-    const joinedMemberships = await GroupMembership.find({
-      user: userId,
-      status: GROUP_MEMBERSHIP_STATUS.JOINED,
-    }).select("group");
-
-    const joinedGroupIds = joinedMemberships.map((m) => m.group);
-
-    // 3. Find Groups
-    // Logic: (Public) OR (Private/Closed AND Member)
     const query = {
       type: GROUP_TYPES.OFFICIAL_INSTITUTION,
       isDeleted: { $ne: true },
       _id: { $nin: bannedGroupIds },
       $or: [
-        { privacy: GROUP_PRIVACY.PUBLIC },
-        { _id: { $in: joinedGroupIds } },
+        { privacy: { $in: [GROUP_PRIVACY.PUBLIC, GROUP_PRIVACY.PRIVATE] } },
+        { privacy: GROUP_PRIVACY.CLOSED, _id: { $in: joinedGroupIds } },
       ],
     };
 
-    const groupsData = await Group.find(query)
-      .sort({ createdAt: -1 })
-      .select(
-        "name slug description coverImage type privacy membersCount postsCount"
-      )
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    const [groupsData, totalDocs] = await Promise.all([
+      Group.find(query)
+        .sort({ createdAt: -1 })
+        .select(
+          "name slug description coverImage type privacy membersCount postsCount"
+        )
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
+      Group.countDocuments(query),
+    ]);
 
     const groupIds = groupsData.map((g) => g._id);
 
-    // 4. Get Membership Status for these groups
     const myMemberships = await GroupMembership.find({
       user: userId,
       group: { $in: groupIds },
-    }).lean();
+    })
+      .select("group status")
+      .lean();
 
-    // 5. Format Response
-    const groups = groupsData.map((group) => {
-      const membership = myMemberships.find(
-        (m) => m.group.toString() === group._id.toString()
-      );
-      const status = membership
-        ? membership.status
-        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
+    const statusByGroupId = new Map(
+      myMemberships.map((m) => [m.group.toString(), m.status])
+    );
 
-      return {
-        group,
-        meta: {
-          status,
-        },
-      };
-    });
+    const groups = groupsData.map((group) => ({
+      group,
+      meta: {
+        status:
+          statusByGroupId.get(group._id.toString()) ??
+          GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      },
+    }));
 
-    // 6. Count Total
-    const totalDocs = await Group.countDocuments(query);
-
-    const totalPages = Math.ceil(totalDocs / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const totalPages = Math.ceil(totalDocs / parsedLimit);
+    const hasNextPage = parsedPage < totalPages;
+    const hasPrevPage = parsedPage > 1;
 
     return {
       groups,
       pagination: {
         totalDocs,
-        limit: Number(limit),
-        page: Number(page),
+        limit: parsedLimit,
+        page: parsedPage,
         totalPages,
         hasNextPage,
         hasPrevPage,
@@ -707,82 +700,76 @@ const groupServices = {
   },
 
   getCareerGroupsService: async (userId, page = 1, limit = 10) => {
-    const skip = (page - 1) * limit;
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    // 1. Get Banned Group IDs
-    const bannedMemberships = await GroupMembership.find({
-      user: userId,
-      status: GROUP_MEMBERSHIP_STATUS.BANNED,
-    }).select("group");
+    const [bannedGroupIds, joinedGroupIds] = await Promise.all([
+      GroupMembership.distinct("group", {
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.BANNED,
+      }),
+      GroupMembership.distinct("group", {
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.JOINED,
+        isDeleted: { $ne: true },
+      }),
+    ]);
 
-    const bannedGroupIds = bannedMemberships.map((m) => m.group);
-
-    // 2. Get Joined Group IDs
-    const joinedMemberships = await GroupMembership.find({
-      user: userId,
-      status: GROUP_MEMBERSHIP_STATUS.JOINED,
-    }).select("group");
-
-    const joinedGroupIds = joinedMemberships.map((m) => m.group);
-
-    // 3. Find Groups
     const query = {
       type: GROUP_TYPES.JOBS_CAREERS,
       isDeleted: { $ne: true },
       _id: { $nin: bannedGroupIds },
       $or: [
-        { privacy: GROUP_PRIVACY.PUBLIC },
-        { _id: { $in: joinedGroupIds } },
+        { privacy: { $in: [GROUP_PRIVACY.PUBLIC, GROUP_PRIVACY.PRIVATE] } },
+        { privacy: GROUP_PRIVACY.CLOSED, _id: { $in: joinedGroupIds } },
       ],
     };
 
-    const groupsData = await Group.find(query)
-      .sort({ createdAt: -1 })
-      .select(
-        "name slug description coverImage type privacy membersCount postsCount"
-      )
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    const [groupsData, totalDocs] = await Promise.all([
+      Group.find(query)
+        .sort({ createdAt: -1 })
+        .select(
+          "name slug description coverImage type privacy membersCount postsCount"
+        )
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
+      Group.countDocuments(query),
+    ]);
 
     const groupIds = groupsData.map((g) => g._id);
 
-    // 4. Get Membership Status
     const memberships = await GroupMembership.find({
       user: userId,
       group: { $in: groupIds },
-    }).lean();
+    })
+      .select("group status")
+      .lean();
 
-    // 5. Format Response
-    const groups = groupsData.map((group) => {
-      const membership = memberships.find(
-        (m) => m.group.toString() === group._id.toString()
-      );
-      const status = membership
-        ? membership.status
-        : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
+    const statusByGroupId = new Map(
+      memberships.map((m) => [m.group.toString(), m.status])
+    );
 
-      return {
-        group,
-        meta: {
-          status,
-        },
-      };
-    });
+    const groups = groupsData.map((group) => ({
+      group,
+      meta: {
+        status:
+          statusByGroupId.get(group._id.toString()) ??
+          GROUP_MEMBERSHIP_STATUS.NOT_JOINED,
+      },
+    }));
 
-    // 6. Count Total
-    const totalDocs = await Group.countDocuments(query);
-
-    const totalPages = Math.ceil(totalDocs / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const totalPages = Math.ceil(totalDocs / parsedLimit);
+    const hasNextPage = parsedPage < totalPages;
+    const hasPrevPage = parsedPage > 1;
 
     return {
       groups,
       pagination: {
         totalDocs,
-        limit: Number(limit),
-        page: Number(page),
+        limit: parsedLimit,
+        page: parsedPage,
         totalPages,
         hasNextPage,
         hasPrevPage,
@@ -791,30 +778,42 @@ const groupServices = {
   },
 
   getSuggestedGroupsService: async (userId, page = 1, limit = 10) => {
-    const skip = (page - 1) * limit;
+    const parsedPage = Number(page) || 1;
+    const parsedLimit = Number(limit) || 10;
+    const skip = (parsedPage - 1) * parsedLimit;
 
-    // 1. Find all groups the user has ANY relationship with (Joined, Pending, Invited, etc.)
-    const userMemberships = await GroupMembership.find({
-      user: userId,
-    }).select("group");
+    const [relatedGroupIds, bannedGroupIds] = await Promise.all([
+      GroupMembership.distinct("group", {
+        user: userId,
+        isDeleted: { $ne: true },
+        status: { $ne: GROUP_MEMBERSHIP_STATUS.NOT_JOINED },
+      }),
+      GroupMembership.distinct("group", {
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.BANNED,
+      }),
+    ]);
 
-    const excludedGroupIds = userMemberships.map((m) => m.group);
+    const excludedGroupIdMap = new Map();
+    for (const id of [...relatedGroupIds, ...bannedGroupIds]) {
+      excludedGroupIdMap.set(id.toString(), id);
+    }
+    const excludedGroupIds = Array.from(excludedGroupIdMap.values());
 
-    // 2. Query groups:
-    //    - Exclude groups user is already related to
-    //    - Exclude CLOSED groups
-    //    - Exclude DELETED groups
     const query = {
       _id: { $nin: excludedGroupIds },
       privacy: { $ne: GROUP_PRIVACY.CLOSED },
       isDeleted: { $ne: true },
     };
 
-    const groupsData = await Group.find(query)
-      .sort({ membersCount: -1, createdAt: -1 }) // Sort by popularity then newness
-      .skip(skip)
-      .limit(Number(limit))
-      .lean();
+    const [groupsData, totalDocs] = await Promise.all([
+      Group.find(query)
+        .sort({ membersCount: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
+      Group.countDocuments(query),
+    ]);
 
     // All returned groups are NOT_JOINED by definition
     const groups = groupsData.map((group) => {
@@ -826,18 +825,16 @@ const groupServices = {
       };
     });
 
-    const totalDocs = await Group.countDocuments(query);
-
-    const totalPages = Math.ceil(totalDocs / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const totalPages = Math.ceil(totalDocs / parsedLimit);
+    const hasNextPage = parsedPage < totalPages;
+    const hasPrevPage = parsedPage > 1;
 
     return {
       groups,
       pagination: {
         totalDocs,
-        limit: Number(limit),
-        page: Number(page),
+        limit: parsedLimit,
+        page: parsedPage,
         totalPages,
         hasNextPage,
         hasPrevPage,
@@ -897,6 +894,7 @@ const groupServices = {
     const memberships = await GroupMembership.find({
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.INVITED,
+      isDeleted: { $ne: true },
     })
       .sort({ createdAt: -1 })
       .select("group")
@@ -907,6 +905,7 @@ const groupServices = {
     const totalDocs = await GroupMembership.countDocuments({
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.INVITED,
+      isDeleted: { $ne: true },
     });
 
     const totalPages = Math.ceil(totalDocs / limit);
@@ -953,6 +952,7 @@ const groupServices = {
     const membership = await GroupMembership.findOne({
       group: group._id,
       user: userId,
+      isDeleted: { $ne: true },
     }).lean();
 
     const status = membership

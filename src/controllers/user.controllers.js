@@ -64,7 +64,7 @@ const loginUser = asyncHandler(async (req, res) => {
         {
           user,
         },
-        "User logged In Successfully"
+        `Welcome back ${user.fullName}!`
       )
     );
 });
@@ -94,7 +94,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
 
-  const { accessToken, refreshToken } = await refreshAccessTokenService(incomingRefreshToken);
+  const { accessToken, refreshToken } =
+    await refreshAccessTokenService(incomingRefreshToken);
 
   const options = {
     httpOnly: true,

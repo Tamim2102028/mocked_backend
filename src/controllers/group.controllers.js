@@ -1,10 +1,8 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import {
-  groupServices,
-  groupActions,
-} from "../services/group.service.js";
+import { groupServices, groupActions } from "../services/group.service.js";
+import { GROUP_MEMBERSHIP_STATUS } from "../constants/index.js";
 import {
   toggleLikePostService,
   toggleMarkAsReadService,
@@ -148,7 +146,9 @@ const getSentRequestsGroups = asyncHandler(async (req, res) => {
 // 🚀 7. GET INVITED GROUPS
 // ==========================================
 const getInvitedGroups = asyncHandler(async (req, res) => {
-  const { groups, pagination } = await groupServices.getInvitedGroupsService(req.user._id);
+  const { groups, pagination } = await groupServices.getInvitedGroupsService(
+    req.user._id
+  );
 
   return res
     .status(200)
@@ -168,9 +168,15 @@ const joinGroup = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
   const { status } = await groupActions.joinGroupService(groupId, req.user._id);
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { status }, "Join request sent successfully"));
+  // Choose an appropriate message depending on the resulting membership status
+  let message = "Joined / request sent successfully";
+  if (status === GROUP_MEMBERSHIP_STATUS.JOINED) {
+    message = "You have joined the group";
+  } else if (status === GROUP_MEMBERSHIP_STATUS.PENDING) {
+    message = "Join request sent successfully";
+  }
+
+  return res.status(200).json(new ApiResponse(200, { status }, message));
 });
 
 // ==========================================
@@ -178,7 +184,10 @@ const joinGroup = asyncHandler(async (req, res) => {
 // ==========================================
 const leaveGroup = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { status } = await groupActions.leaveGroupService(groupId, req.user._id);
+  const { status } = await groupActions.leaveGroupService(
+    groupId,
+    req.user._id
+  );
 
   return res
     .status(200)
@@ -190,7 +199,10 @@ const leaveGroup = asyncHandler(async (req, res) => {
 // ==========================================
 const cancelJoinRequest = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { status } = await groupActions.cancelJoinRequestService(groupId, req.user._id);
+  const { status } = await groupActions.cancelJoinRequestService(
+    groupId,
+    req.user._id
+  );
 
   return res
     .status(200)
@@ -240,7 +252,10 @@ const rejectJoinRequest = asyncHandler(async (req, res) => {
 // ==========================================
 const getGroupDetails = asyncHandler(async (req, res) => {
   const { slug } = req.params;
-  const { group, meta } = await groupServices.getGroupDetailsService(slug, req.user._id);
+  const { group, meta } = await groupServices.getGroupDetailsService(
+    slug,
+    req.user._id
+  );
 
   return res
     .status(200)
@@ -279,7 +294,11 @@ const getGroupMembers = asyncHandler(async (req, res) => {
 // ==========================================
 const removeMember = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const { memberId } = await groupActions.removeMemberService(groupId, userId, req.user._id);
+  const { memberId } = await groupActions.removeMemberService(
+    groupId,
+    userId,
+    req.user._id
+  );
 
   return res
     .status(200)
@@ -291,7 +310,11 @@ const removeMember = asyncHandler(async (req, res) => {
 // ==========================================
 const assignAdmin = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const { role } = await groupActions.assignAdminService(groupId, userId, req.user._id);
+  const { role } = await groupActions.assignAdminService(
+    groupId,
+    userId,
+    req.user._id
+  );
 
   return res
     .status(200)
@@ -303,7 +326,11 @@ const assignAdmin = asyncHandler(async (req, res) => {
 // ==========================================
 const revokeAdmin = asyncHandler(async (req, res) => {
   const { groupId, userId } = req.params;
-  const { role } = await groupActions.revokeAdminService(groupId, userId, req.user._id);
+  const { role } = await groupActions.revokeAdminService(
+    groupId,
+    userId,
+    req.user._id
+  );
 
   return res
     .status(200)

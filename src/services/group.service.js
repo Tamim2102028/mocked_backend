@@ -133,10 +133,20 @@ const createGroupService = async (
 
 // === Leave Group Service ===
 const leaveGroupService = async (groupId, userId) => {
-  // 1. Check if group exists
-  const group = await Group.findById(groupId);
+  // 1. Check if group exists (including deleted ones)
+  // We use findOne instead of findById to potentially include deleted documents if your schema supports soft delete
+  // Assuming standard Mongoose behavior, findById only returns non-deleted docs if a global plugin is used.
+  // If you are using soft delete with 'isDeleted' field:
+  let group = await Group.findOne({ _id: groupId });
+
   if (!group) {
+    // If absolutely no record found
     throw new ApiError(404, "Group not found");
+  }
+
+  // Check for soft deleted group
+  if (group.isDeleted) {
+    throw new ApiError(404, "This group has been deleted");
   }
 
   // 2. Check membership
@@ -486,6 +496,7 @@ const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
 
   const groupsData = await Group.find({
     type: GROUP_TYPES.OFFICIAL_INSTITUTION,
+    isDeleted: { $ne: true },
   })
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -545,7 +556,10 @@ const getUniversityGroupsService = async (userId, page = 1, limit = 10) => {
 const getCareerGroupsService = async (userId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
-  const groupsData = await Group.find({ type: GROUP_TYPES.JOBS_CAREERS })
+  const groupsData = await Group.find({
+    type: GROUP_TYPES.JOBS_CAREERS,
+    isDeleted: { $ne: true },
+  })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(Number(limit))
@@ -614,9 +628,11 @@ const getSuggestedGroupsService = async (userId, page = 1, limit = 10) => {
   // 2. Query groups:
   //    - Exclude groups user is already related to
   //    - Exclude CLOSED groups
+  //    - Exclude DELETED groups
   const query = {
     _id: { $nin: excludedGroupIds },
     privacy: { $ne: GROUP_PRIVACY.CLOSED },
+    isDeleted: { $ne: true },
   };
 
   const groupsData = await Group.find(query)
@@ -755,6 +771,11 @@ const getGroupDetailsService = async (slug, userId) => {
     throw new ApiError(404, "Group not found");
   }
 
+  // Check if group is soft deleted
+  if (group.isDeleted) {
+    throw new ApiError(404, "This group has been deleted");
+  }
+
   // Get user's membership status
   const membership = await GroupMembership.findOne({
     group: group._id,
@@ -766,10 +787,26 @@ const getGroupDetailsService = async (slug, userId) => {
     : GROUP_MEMBERSHIP_STATUS.NOT_JOINED;
 
   // Metadata
+  const isMember = status === GROUP_MEMBERSHIP_STATUS.JOINED;
+  const isAdmin = membership?.role === GROUP_ROLES.ADMIN;
+  const isOwner = membership?.role === GROUP_ROLES.OWNER;
+  const isModerator = membership?.role === GROUP_ROLES.MODERATOR;
+
+  const isRestricted =
+    !isMember &&
+    !isAdmin &&
+    !isOwner &&
+    !isModerator &&
+    (group.privacy === GROUP_PRIVACY.PRIVATE ||
+      group.privacy === GROUP_PRIVACY.CLOSED);
+
   const meta = {
     status,
-    isMember: status === GROUP_MEMBERSHIP_STATUS.JOINED,
-    isAdmin: membership?.role === "ADMIN" || membership?.role === "OWNER",
+    isAdmin,
+    isOwner,
+    isModerator,
+    isMember,
+    isRestricted,
   };
 
   return { group, meta };
@@ -782,6 +819,11 @@ const getGroupMembersService = async (groupId, page = 1, limit = 10) => {
   const group = await Group.findById(groupId);
   if (!group) {
     throw new ApiError(404, "Group not found");
+  }
+
+  // Check if group is deleted
+  if (group.isDeleted) {
+    throw new ApiError(404, "This group has been deleted");
   }
 
   // Fetch members
@@ -835,9 +877,16 @@ const getGroupFeedService = async (groupId, userId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
   // 1. Find Group
-  const group = await Group.findById(groupId).select("_id privacy settings");
+  const group = await Group.findById(groupId).select(
+    "_id privacy settings isDeleted"
+  );
   if (!group) {
     throw new ApiError(404, "Group not found");
+  }
+
+  // Check if group is deleted
+  if (group.isDeleted) {
+    throw new ApiError(404, "This group has been deleted");
   }
 
   // 2. Check Permission (If Private, must be member)
@@ -974,13 +1023,12 @@ const deleteGroupService = async (groupId, userId) => {
     throw new ApiError(403, "Only the owner can delete the group");
   }
 
-  // 3. Delete All Memberships
-  await GroupMembership.deleteMany({ group: groupId });
-
-  // 4. Delete Group
-  await Group.findByIdAndDelete(groupId);
-
-  // TODO: Delete all posts, comments, etc. associated with the group (Cascade)
+  // 3. Soft Delete Group
+  await Group.findByIdAndUpdate(groupId, {
+    isDeleted: true,
+    deletedAt: new Date(),
+    deletedBy: userId,
+  });
 
   return { groupId };
 };

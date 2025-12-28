@@ -51,6 +51,11 @@ const groupMembershipSchema = new Schema(
     joinedAt: {
       type: Date,
     },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

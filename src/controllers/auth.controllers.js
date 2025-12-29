@@ -6,7 +6,7 @@ import {
   logoutUserService,
   refreshAccessTokenService,
   changePasswordService,
-} from "../services/user.service.js";
+} from "../services/auth.service.js";
 
 // -----------------------------
 // Auth & Session

@@ -8,7 +8,7 @@ import {
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
-} from "../controllers/user.controllers.js";
+} from "../controllers/auth.controllers.js";
 
 // Middlewares
 import { uploadImage } from "../middlewares/multer.middleware.js";

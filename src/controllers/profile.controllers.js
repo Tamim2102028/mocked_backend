@@ -9,7 +9,7 @@ import {
   updateAccountDetailsService,
   getUserProfileHeaderService,
   getUserDetailsService,
-} from "../services/user.service.js";
+} from "../services/auth.service.js";
 import {
   createPostService,
   toggleLikePostService,

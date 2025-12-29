@@ -27,8 +27,8 @@ app.use(cookieParser());
 // });
 
 // Import and use routes
-import userRouter from "./routes/user.routes.js";
-app.use("/api/v1/users", userRouter);
+import authRouter from "./routes/auth.routes.js";
+app.use("/api/v1/users", authRouter);
 
 import { errorHandler } from "./middlewares/error.middleware.js";
 import crRouter from "./routes/cr.routes.js";

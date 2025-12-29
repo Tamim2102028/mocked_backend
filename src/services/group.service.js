@@ -576,7 +576,7 @@ const groupServices = {
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
       isDeleted: { $ne: true },
     })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: 1 })
       .select("group status")
       .skip(skip)
       .limit(Number(limit))
@@ -650,7 +650,7 @@ const groupServices = {
 
     const [groupsData, totalDocs] = await Promise.all([
       Group.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: 1 })
         .select(
           "name slug description coverImage type privacy membersCount postsCount"
         )
@@ -726,7 +726,7 @@ const groupServices = {
 
     const [groupsData, totalDocs] = await Promise.all([
       Group.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: -1, _id: 1 })
         .select(
           "name slug description coverImage type privacy membersCount postsCount"
         )
@@ -803,7 +803,7 @@ const groupServices = {
 
     const [groupsData, totalDocs] = await Promise.all([
       Group.find(query)
-        .sort({ membersCount: -1, createdAt: -1 })
+        .sort({ membersCount: -1, createdAt: -1, _id: 1 })
         .skip(skip)
         .limit(parsedLimit)
         .lean(),
@@ -840,7 +840,7 @@ const groupServices = {
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.PENDING,
     })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: 1 })
       .select("group")
       .skip(skip)
       .limit(Number(limit))
@@ -887,7 +887,7 @@ const groupServices = {
       status: GROUP_MEMBERSHIP_STATUS.INVITED,
       isDeleted: { $ne: true },
     })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: 1 })
       .select("group")
       .skip(skip)
       .limit(Number(limit))

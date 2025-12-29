@@ -41,23 +41,43 @@ const createGroup = asyncHandler(async (req, res) => {
 // 🚀 2. GET MY GROUPS
 // ==========================================
 const getMyGroups = asyncHandler(async (req, res) => {
-  const groups = await groupServices.getMyGroupsService(req.user._id);
+  const { page, limit } = req.query;
+  const { groups, pagination } = await groupServices.getMyGroupsService(
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, groups, "My groups fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "My groups fetched successfully"
+      )
+    );
 });
 
 // ==========================================
 // 🚀 3. GET UNIVERSITY GROUPS
 // ==========================================
 const getUniversityGroups = asyncHandler(async (req, res) => {
-  const groups = await groupServices.getUniversityGroupsService(req.user._id);
+  const { page, limit } = req.query;
+  const { groups, pagination } = await groupServices.getUniversityGroupsService(
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
     .json(
-      new ApiResponse(200, groups, "University groups fetched successfully")
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "University groups fetched successfully"
+      )
     );
 });
 
@@ -65,23 +85,43 @@ const getUniversityGroups = asyncHandler(async (req, res) => {
 // 🚀 4. GET CAREER GROUPS
 // ==========================================
 const getCareerGroups = asyncHandler(async (req, res) => {
-  const groups = await groupServices.getCareerGroupsService(req.user._id);
+  const { page, limit } = req.query;
+  const { groups, pagination } = await groupServices.getCareerGroupsService(
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, groups, "Career groups fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "Career groups fetched successfully"
+      )
+    );
 });
 
 // ==========================================
 // 🚀 5. GET SUGGESTED GROUPS
 // ==========================================
 const getSuggestedGroups = asyncHandler(async (req, res) => {
-  const groups = await groupServices.getSuggestedGroupsService(req.user._id);
+  const { page, limit } = req.query;
+  const { groups, pagination } = await groupServices.getSuggestedGroupsService(
+    req.user._id,
+    page,
+    limit
+  );
 
   return res
     .status(200)
     .json(
-      new ApiResponse(200, groups, "Suggested groups fetched successfully")
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "Suggested groups fetched successfully"
+      )
     );
 });
 
@@ -136,19 +176,30 @@ const inviteMembers = asyncHandler(async (req, res) => {
 // 🚀 4. GET MY GROUPS
 // ==========================================
 const getSentRequestsGroups = asyncHandler(async (req, res) => {
-  const groups = await groupServices.getSentRequestsGroupsService(req.user._id);
+  const { page, limit } = req.query;
+  const { groups, pagination } =
+    await groupServices.getSentRequestsGroupsService(req.user._id, page, limit);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, groups, "Sent requests fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { groups, pagination },
+        "Sent requests fetched successfully"
+      )
+    );
 });
 
 // ==========================================
 // 🚀 7. GET INVITED GROUPS
 // ==========================================
 const getInvitedGroups = asyncHandler(async (req, res) => {
+  const { page, limit } = req.query;
   const { groups, pagination } = await groupServices.getInvitedGroupsService(
-    req.user._id
+    req.user._id,
+    page,
+    limit
   );
 
   return res
@@ -373,7 +424,9 @@ const getGroupPinnedPosts = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, { posts, pagination }, "Group pinned posts fetched"));
+    .json(
+      new ApiResponse(200, { posts, pagination }, "Group pinned posts fetched")
+    );
 });
 
 // ==========================================

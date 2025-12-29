@@ -8,6 +8,7 @@ import {
   toggleMarkAsReadService,
   deletePostService,
   updatePostService,
+  togglePinPostService,
 } from "../services/post.service.js";
 import {
   getPostCommentsService,
@@ -357,6 +358,25 @@ const getGroupFeed = asyncHandler(async (req, res) => {
 });
 
 // ==========================================
+// 🚀 GET GROUP PINNED POSTS
+// ==========================================
+const getGroupPinnedPosts = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  const { posts, pagination } = await groupServices.getGroupPinnedPostsService(
+    groupId,
+    req.user._id,
+    page,
+    limit
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { posts, pagination }, "Group pinned posts fetched"));
+});
+
+// ==========================================
 // 🚀 19. CREATE GROUP POST
 // ==========================================
 const createGroupPost = asyncHandler(async (req, res) => {
@@ -404,6 +424,25 @@ const toggleGroupPostRead = asyncHandler(async (req, res) => {
         200,
         { isRead },
         isRead ? "Marked as read" : "Marked as unread"
+      )
+    );
+});
+
+// ==========================================
+// 🚀 TOGGLE PIN GROUP POST (Admin/Owner only)
+// ==========================================
+const toggleGroupPostPin = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+
+  const { post, meta } = await togglePinPostService(postId, req.user._id);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { post, meta },
+        post.isPinned ? "Post pinned" : "Post unpinned"
       )
     );
 });
@@ -583,8 +622,10 @@ export {
   createGroupPost,
   toggleGroupPostLike,
   toggleGroupPostRead,
+  toggleGroupPostPin,
   deleteGroupPost,
   updateGroupPost,
+  getGroupPinnedPosts,
   getGroupPostComments,
   createGroupPostComment,
   deleteGroupPostComment,

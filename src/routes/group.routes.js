@@ -24,9 +24,11 @@ import {
   revokeAdmin,
   toggleGroupPostLike,
   toggleGroupPostRead,
+  toggleGroupPostPin,
   deleteGroupPost,
   updateGroupPost,
   getGroupPostComments,
+  getGroupPinnedPosts,
   createGroupPostComment,
   deleteGroupPostComment,
   updateGroupPostComment,
@@ -64,6 +66,7 @@ router.post("/:groupId/reject", rejectJoinRequest);
 router.get("/:slug", getGroupDetails);
 router.get("/:groupId/members", getGroupMembers);
 router.get("/:groupId/feed", getGroupFeed);
+router.get("/:groupId/pinned", getGroupPinnedPosts);
 
 // Group Details page Action Routes
 router.post("/:groupId/post", createGroupPost);
@@ -81,6 +84,7 @@ router.patch("/:groupId/members/:userId/revoke-admin", revokeAdmin);
 // ==========================================
 router.post("/posts/:postId/like", toggleGroupPostLike);
 router.post("/posts/:postId/read", toggleGroupPostRead);
+router.post("/posts/:postId/pin", toggleGroupPostPin);
 router.delete("/posts/:postId", deleteGroupPost);
 router.patch("/posts/:postId", updateGroupPost);
 

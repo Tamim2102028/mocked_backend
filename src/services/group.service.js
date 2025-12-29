@@ -1079,10 +1079,125 @@ const groupServices = {
       .populate("author", "fullName avatar userName")
       .lean();
 
+    // 4. Add Context (Like, Read, Mine, Role)
+    let viewedPostIds = new Set();
+    let likedPostIds = new Set();
+    const postIds = posts.map((p) => p._id);
+
+    // Fetch membership once to determine admin/owner for current user
+    let userMembership = null;
+    if (userId) {
+      userMembership = await GroupMembership.findOne({
+        group: groupId,
+        user: userId,
+      });
+    }
+
+    if (userId && posts.length > 0) {
+      const viewedPosts = await ReadPost.find({
+        user: userId,
+        post: { $in: postIds },
+      }).select("post");
+      viewedPostIds = new Set(viewedPosts.map((vp) => vp.post.toString()));
+
+      const likedPosts = await Reaction.find({
+        user: userId,
+        targetModel: REACTION_TARGET_MODELS.POST,
+        targetId: { $in: postIds },
+      }).select("targetId");
+      likedPostIds = new Set(likedPosts.map((r) => r.targetId.toString()));
+    }
+
+    const postsWithContext = posts.map((post) => ({
+      post,
+      meta: {
+        isLiked: likedPostIds.has(post._id.toString()),
+        isSaved: false,
+        isMine: post.author._id.toString() === (userId || "").toString(),
+        isRead: viewedPostIds.has(post._id.toString()),
+        isAdmin:
+          !!userMembership &&
+          [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role),
+        isOwner: !!userMembership && userMembership.role === GROUP_ROLES.OWNER,
+        isModerator:
+          !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
+      },
+    }));
+
+    const totalDocs = await Post.countDocuments(query);
+    const totalPages = Math.ceil(totalDocs / limit);
+
+    return {
+      posts: postsWithContext,
+      pagination: {
+        totalDocs,
+        limit: Number(limit),
+        page: Number(page),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  },
+
+  getGroupPinnedPostsService: async (groupId, userId, page = 1, limit = 10) => {
+    const skip = (page - 1) * limit;
+
+    // 1. Find Group
+    const group = await Group.findById(groupId).select(
+      "_id privacy settings isDeleted"
+    );
+    if (!group) {
+      throw new ApiError(404, "Group not found");
+    }
+
+    // Check if group is deleted
+    if (group.isDeleted) {
+      throw new ApiError(404, "This group has been deleted");
+    }
+
+    // 2. Check Permission (If Private, must be member)
+    if (group.privacy === GROUP_PRIVACY.PRIVATE) {
+      const membership = await GroupMembership.findOne({
+        group: groupId,
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.JOINED,
+      });
+
+      if (!membership) {
+        throw new ApiError(403, "You must be a member to view posts");
+      }
+    }
+
+    // 3. Query Pinned Posts
+    const query = {
+      postOnModel: POST_TARGET_MODELS.GROUP,
+      postOnId: groupId,
+      isDeleted: false,
+      isArchived: false,
+      isPinned: true,
+    };
+
+    const posts = await Post.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate("author", "fullName avatar userName")
+      .lean();
+
     // 4. Add Context (Like, Read, Mine)
     let viewedPostIds = new Set();
     let likedPostIds = new Set();
     const postIds = posts.map((p) => p._id);
+
+    // Fetch membership once to determine admin/owner for current user
+    let userMembership = null;
+    if (userId) {
+      userMembership = await GroupMembership.findOne({
+        group: groupId,
+        user: userId,
+      });
+    }
 
     if (userId && posts.length > 0) {
       const viewedPosts = await ReadPost.find({
@@ -1106,6 +1221,12 @@ const groupServices = {
         isSaved: false,
         isMine: post.author._id.toString() === userId.toString(),
         isRead: viewedPostIds.has(post._id.toString()),
+        isAdmin:
+          !!userMembership &&
+          [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role),
+        isOwner: !!userMembership && userMembership.role === GROUP_ROLES.OWNER,
+        isModerator:
+          !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
       },
     }));
 

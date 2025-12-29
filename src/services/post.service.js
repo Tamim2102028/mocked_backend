@@ -9,12 +9,14 @@ import { Reaction } from "../models/reaction.model.js";
 import { Comment } from "../models/comment.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import { Group } from "../models/group.model.js";
+import { GroupMembership } from "../models/groupMembership.model.js";
 import {
   POST_TARGET_MODELS,
   POST_TYPES,
   POST_VISIBILITY,
   REACTION_TARGET_MODELS,
   FRIENDSHIP_STATUS,
+  GROUP_ROLES,
 } from "../constants/index.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -329,6 +331,62 @@ export const updatePostService = async (postId, userId, updateData) => {
       isSaved: false,
       isMine: true,
       isRead: true,
+    },
+  };
+};
+
+// === Toggle Pin Post Service (Group only, Admin/Owner only) ===
+export const togglePinPostService = async (postId, userId) => {
+  const post = await Post.findById(postId);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  if (post.isDeleted) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  // Only group posts can be pinned in this implementation
+  if (post.postOnModel !== POST_TARGET_MODELS.GROUP) {
+    throw new ApiError(400, "Pinning is only supported for group posts");
+  }
+
+  // Check admin/owner membership on the group
+  const membership = await GroupMembership.findOne({
+    group: post.postOnId,
+    user: userId,
+    role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
+  });
+
+  if (!membership) {
+    throw new ApiError(403, "You are not authorized to pin/unpin posts in this group");
+  }
+
+  // Toggle pinned flag
+  post.isPinned = !post.isPinned;
+  await post.save();
+
+  // Return updated post with author populated and minimal meta
+  const updatedPostObj = await Post.findById(postId).populate(
+    "author",
+    "fullName avatar userName"
+  );
+
+  // Check like status
+  const existingReaction = await Reaction.findOne({
+    targetId: postId,
+    targetModel: REACTION_TARGET_MODELS.POST,
+    user: userId,
+  });
+
+  return {
+    post: updatedPostObj,
+    meta: {
+      isLiked: !!existingReaction,
+      isSaved: false,
+      isMine: post.author.toString() === userId.toString(),
+      isRead: false,
     },
   };
 };

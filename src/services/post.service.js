@@ -360,7 +360,10 @@ export const togglePinPostService = async (postId, userId) => {
   });
 
   if (!membership) {
-    throw new ApiError(403, "You are not authorized to pin/unpin posts in this group");
+    throw new ApiError(
+      403,
+      "You are not authorized to pin/unpin posts in this group"
+    );
   }
 
   // Toggle pinned flag

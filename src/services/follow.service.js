@@ -6,13 +6,6 @@ import { Friendship } from "../models/friendship.model.js";
 import { FOLLOW_TARGET_MODELS, FRIENDSHIP_STATUS } from "../constants/index.js";
 import { ApiError } from "../utils/ApiError.js";
 
-/**
- * Toggle follow status for a target (User, Institution, Department, etc.)
- * @param {string} targetId - ID of the target to follow/unfollow
- * @param {string} targetModel - Model type of the target
- * @param {string} currentUserId - ID of the user performing the action
- * @returns {Promise<Object>} - { isFollowing: boolean }
- */
 export const toggleFollowService = async (
   targetId,
   targetModel,

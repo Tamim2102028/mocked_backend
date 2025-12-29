@@ -209,27 +209,6 @@ const toggleProfileFollow = asyncHandler(async (req, res) => {
     );
 });
 
-export {
-  getUserProfilePosts,
-  createProfilePost,
-  toggleProfilePostLike,
-  toggleProfilePostRead,
-  deleteProfilePost,
-  updateProfilePost,
-  getProfilePostComments,
-  createProfilePostComment,
-  deleteProfilePostComment,
-  updateProfilePostComment,
-  toggleProfilePostCommentLike,
-  toggleProfileFollow,
-  updateAcademicProfile,
-  updateUserAvatar,
-  updateUserCoverImage,
-  updateAccountDetails,
-  getUserProfileHeader,
-  getUserDetails,
-};
-
 // -----------------------------
 // Profile Updates / Onboarding (moved)
 // -----------------------------
@@ -306,3 +285,24 @@ const getUserDetails = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, { user }, "User details fetched successfully"));
 });
+
+export {
+  getUserProfilePosts,
+  createProfilePost,
+  toggleProfilePostLike,
+  toggleProfilePostRead,
+  deleteProfilePost,
+  updateProfilePost,
+  getProfilePostComments,
+  createProfilePostComment,
+  deleteProfilePostComment,
+  updateProfilePostComment,
+  toggleProfilePostCommentLike,
+  toggleProfileFollow,
+  updateAcademicProfile,
+  updateUserAvatar,
+  updateUserCoverImage,
+  updateAccountDetails,
+  getUserProfileHeader,
+  getUserDetails,
+};

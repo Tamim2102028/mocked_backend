@@ -28,6 +28,8 @@ app.use(cookieParser());
 
 // Import and use routes
 import userRouter from "./routes/user.routes.js";
+app.use("/api/v1/users", userRouter);
+
 import { errorHandler } from "./middlewares/error.middleware.js";
 import crRouter from "./routes/cr.routes.js";
 import groupRouter from "./routes/group.routes.js";
@@ -37,7 +39,6 @@ import institutionRouter from "./routes/institution.routes.js";
 import friendshipRouter from "./routes/friendship.routes.js";
 import profileRouter from "./routes/profile.routes.js";
 
-app.use("/api/v1/users", userRouter);
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/cr-corner", crRouter);
 app.use("/api/v1/groups", groupRouter);
@@ -46,6 +47,6 @@ app.use("/api/v1/rooms", roomRouter);
 app.use("/api/v1/institutions", institutionRouter);
 app.use("/api/v1/friendships", friendshipRouter);
 
-// ⚠️ সবার শেষে এটা বসাতে হবে
+// Global Error Handling Middleware
 app.use(errorHandler);
 export default app;

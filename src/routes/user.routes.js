@@ -1,4 +1,6 @@
 import { Router } from "express";
+
+// Controllers
 import {
   registerUser,
   loginUser,
@@ -6,12 +8,6 @@ import {
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
-  updateAccountDetails, // সাধারণ তথ্য (Bio, Social Links) আপডেট
-  updateAcademicProfile, // একাডেমিক তথ্য (Auto Chat Trigger) আপডেট
-  updateUserAvatar,
-  updateUserCoverImage, // (যদি কন্ট্রোলার বানিয়ে থাকেন, না বানালে কমেন্ট করে রাখবেন)
-  getUserProfileHeader,
-  getUserDetails,
 } from "../controllers/user.controllers.js";
 
 // Middlewares
@@ -20,10 +16,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 
 // Validators
-import {
-  userRegisterSchema,
-  userOnboardingSchema,
-} from "../validators/auth.validator.js";
+import { userRegisterSchema } from "../validators/auth.validator.js";
 
 const router = Router();
 
@@ -49,47 +42,16 @@ router.post("/login", loginUser);
 // 🔒 SECURED ROUTES (Login Required)
 // ==================================================
 
-// --- Authentication Management ---
+// Logout Route
 router.post("/logout", verifyJWT, logoutUser);
+
+// Token Refresh Route
 router.post("/refresh-token", refreshAccessToken);
+
+// Change Current Password
 router.post("/change-password", verifyJWT, changeCurrentPassword);
+
+// Get Current User Info
 router.get("/current-user", verifyJWT, getCurrentUser);
-
-// --- Profile Updates (Separated for Performance) ---
-
-// 1. General Info Update (Name, Bio, Social Links, Skills)
-// এটাতে কোনো ভারী লজিক নেই, তাই সিম্পল আপডেট
-router.patch("/update-general", verifyJWT, updateAccountDetails);
-
-// 2. Academic Info Update (Dept, Session, Institution)
-// ⚠️ CRITICAL: এটা কল করলে ব্যাকএন্ডে Auto-Chat Group লজিক রান হবে
-router.patch(
-  "/update-academic",
-  verifyJWT,
-  validate(userOnboardingSchema), // ডাটা ঠিক আছে কিনা চেক করবে
-  updateAcademicProfile
-);
-
-// --- File Updates ---
-
-// Avatar Change
-router.patch(
-  "/avatar",
-  verifyJWT,
-  uploadImage.single("avatar"),
-  updateUserAvatar
-);
-
-// Cover Image Change (Optional: যদি কন্ট্রোলার রেডি থাকে)
-router.patch(
-  "/cover-image",
-  verifyJWT,
-  uploadImage.single("coverImage"),
-  updateUserCoverImage
-);
-
-// --- Public Profile View ---
-router.get("/p/:username", verifyJWT, getUserProfileHeader);
-router.get("/details/:username", verifyJWT, getUserDetails);
 
 export default router;

@@ -57,27 +57,27 @@ router.get("/sentRequests", getSentRequestsGroups);
 router.get("/invitedGroups", getInvitedGroups);
 
 // Group Card Action Routes
-router.post("/:groupId/join", joinGroup);
-router.post("/:groupId/cancel", cancelJoinRequest);
-router.post("/:groupId/accept", acceptJoinRequest);
-router.post("/:groupId/reject", rejectJoinRequest);
+router.post("/:slug/join", joinGroup);
+router.post("/:slug/cancel", cancelJoinRequest);
+router.post("/:slug/accept", acceptJoinRequest);
+router.post("/:slug/reject", rejectJoinRequest);
 
 // Group Details page Routes
 router.get("/:slug", getGroupDetails);
-router.get("/:groupId/members", getGroupMembers);
-router.get("/:groupId/feed", getGroupFeed);
-router.get("/:groupId/pinned", getGroupPinnedPosts);
+router.get("/:slug/members", getGroupMembers);
+router.get("/:slug/feed", getGroupFeed);
+router.get("/:slug/pinned", getGroupPinnedPosts);
 
 // Group Details page Action Routes
-router.post("/:groupId/post", createGroupPost);
-router.delete("/:groupId/leave", leaveGroup);
-router.delete("/:groupId", deleteGroup);
-router.post("/:groupId/invite", inviteMembers);
+router.post("/:slug/post", createGroupPost);
+router.delete("/:slug/leave", leaveGroup);
+router.delete("/:slug", deleteGroup);
+router.post("/:slug/invite", inviteMembers);
 
 // Admin Action Routes
-router.delete("/:groupId/members/:userId", removeMember);
-router.patch("/:groupId/members/:userId/assign-admin", assignAdmin);
-router.patch("/:groupId/members/:userId/revoke-admin", revokeAdmin);
+router.delete("/:slug/members/:userId", removeMember);
+router.patch("/:slug/members/:userId/assign-admin", assignAdmin);
+router.patch("/:slug/members/:userId/revoke-admin", revokeAdmin);
 
 // ==========================================
 // 🚀 POST & COMMENT ACTIONS

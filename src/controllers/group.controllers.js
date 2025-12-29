@@ -17,6 +17,7 @@ import {
   updateCommentService,
   toggleCommentLikeService,
 } from "../services/comment.service.js";
+import { Group } from "../models/group.model.js";
 
 // ==========================================
 // 🚀 1. CREATE GROUP
@@ -129,9 +130,12 @@ const getSuggestedGroups = asyncHandler(async (req, res) => {
 // 🚀 2. DELETE GROUP (Owner Only)
 // ==========================================
 const deleteGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { groupId: deletedGroupId } = await groupActions.deleteGroupService(
-    groupId,
+    group._id,
     req.user._id
   );
 
@@ -150,7 +154,7 @@ const deleteGroup = asyncHandler(async (req, res) => {
 // 🚀 3. INVITE MEMBERS
 // ==========================================
 const inviteMembers = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const { targetUserIds } = req.body; // Array of user IDs
 
   if (
@@ -161,8 +165,11 @@ const inviteMembers = asyncHandler(async (req, res) => {
     throw new ApiError(400, "targetUserIds array is required");
   }
 
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { results } = await groupActions.inviteMembersService(
-    groupId,
+    group._id,
     req.user._id,
     targetUserIds
   );
@@ -217,8 +224,15 @@ const getInvitedGroups = asyncHandler(async (req, res) => {
 // 🚀 8. JOIN GROUP
 // ==========================================
 const joinGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-  const { status } = await groupActions.joinGroupService(groupId, req.user._id);
+  const { slug } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { status } = await groupActions.joinGroupService(
+    group._id,
+    req.user._id
+  );
 
   // Choose an appropriate message depending on the resulting membership status
   let message = "Joined / request sent successfully";
@@ -235,9 +249,13 @@ const joinGroup = asyncHandler(async (req, res) => {
 // 🚀 9. LEAVE GROUP
 // ==========================================
 const leaveGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { status } = await groupActions.leaveGroupService(
-    groupId,
+    group._id,
     req.user._id
   );
 
@@ -250,9 +268,13 @@ const leaveGroup = asyncHandler(async (req, res) => {
 // 🚀 10. CANCEL JOIN REQUEST
 // ==========================================
 const cancelJoinRequest = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { status } = await groupActions.cancelJoinRequestService(
-    groupId,
+    group._id,
     req.user._id
   );
 
@@ -267,11 +289,14 @@ const cancelJoinRequest = asyncHandler(async (req, res) => {
 // 🚀 11. ACCEPT JOIN REQUEST (Admin Only)
 // ==========================================
 const acceptJoinRequest = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const { userId } = req.body;
 
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { status } = await groupActions.acceptJoinRequestService(
-    groupId,
+    group._id,
     req.user._id,
     userId
   );
@@ -285,11 +310,14 @@ const acceptJoinRequest = asyncHandler(async (req, res) => {
 // 🚀 12. REJECT JOIN REQUEST (Admin Only)
 // ==========================================
 const rejectJoinRequest = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const { userId } = req.body;
 
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { status } = await groupActions.rejectJoinRequestService(
-    groupId,
+    group._id,
     req.user._id,
     userId
   );
@@ -324,9 +352,13 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 // 🚀 14. GET GROUP MEMBERS
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { members, pagination } = await groupServices.getGroupMembersService(
-    groupId,
+    group._id,
     req.user._id
   );
 
@@ -345,9 +377,13 @@ const getGroupMembers = asyncHandler(async (req, res) => {
 // 🚀 15. REMOVE MEMBER (Admin Only)
 // ==========================================
 const removeMember = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { memberId } = await groupActions.removeMemberService(
-    groupId,
+    group._id,
     userId,
     req.user._id
   );
@@ -361,9 +397,13 @@ const removeMember = asyncHandler(async (req, res) => {
 // 🚀 16. ASSIGN ADMIN (Owner/Admin Only)
 // ==========================================
 const assignAdmin = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { role } = await groupActions.assignAdminService(
-    groupId,
+    group._id,
     userId,
     req.user._id
   );
@@ -377,9 +417,13 @@ const assignAdmin = asyncHandler(async (req, res) => {
 // 🚀 17. REVOKE ADMIN (Owner Only)
 // ==========================================
 const revokeAdmin = asyncHandler(async (req, res) => {
-  const { groupId, userId } = req.params;
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { role } = await groupActions.revokeAdminService(
-    groupId,
+    group._id,
     userId,
     req.user._id
   );
@@ -393,11 +437,14 @@ const revokeAdmin = asyncHandler(async (req, res) => {
 // 🚀 18. GET GROUP FEED
 // ==========================================
 const getGroupFeed = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { posts, pagination } = await groupServices.getGroupFeedService(
-    groupId,
+    group._id,
     req.user._id,
     page,
     limit
@@ -412,11 +459,14 @@ const getGroupFeed = asyncHandler(async (req, res) => {
 // 🚀 GET GROUP PINNED POSTS
 // ==========================================
 const getGroupPinnedPosts = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { posts, pagination } = await groupServices.getGroupPinnedPostsService(
-    groupId,
+    group._id,
     req.user._id,
     page,
     limit
@@ -433,11 +483,14 @@ const getGroupPinnedPosts = asyncHandler(async (req, res) => {
 // 🚀 19. CREATE GROUP POST
 // ==========================================
 const createGroupPost = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { slug } = req.params;
   const postData = req.body;
 
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
   const { post, meta } = await groupActions.createGroupPostService(
-    groupId,
+    group._id,
     req.user._id,
     postData
   );

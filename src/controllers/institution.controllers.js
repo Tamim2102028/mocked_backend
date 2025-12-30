@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import { createPostService } from "../services/common/post.service.js";
+import { Institution } from "../models/institution.model.js";
 import mongoose from "mongoose";
 
 const _objectId = () => new mongoose.Types.ObjectId().toString();
@@ -123,11 +124,43 @@ const getDepartmentsList = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { departments }, "Departments list fetched"));
 });
 
-// (Moved to dedicated controllers)
+// 🚀 5. SEARCH INSTITUTIONS
+const searchInstitutions = asyncHandler(async (req, res) => {
+  const { q } = req.query;
+
+  if (!q) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { institutions: [] }, "Query is required"));
+  }
+
+  const query = {
+    $or: [
+      { name: { $regex: q, $options: "i" } },
+      { code: { $regex: q, $options: "i" } },
+    ],
+    isActive: true,
+  };
+
+  const institutions = await Institution.find(query)
+    .select("name code logo type")
+    .limit(20);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { institutions },
+        "Institutions searched successfully"
+      )
+    );
+});
 
 export {
   getInstitutionFeed,
   createInstitutionPost,
   getInstitutionDetails,
   getDepartmentsList,
+  searchInstitutions,
 };

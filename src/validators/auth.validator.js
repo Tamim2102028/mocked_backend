@@ -48,13 +48,13 @@ const userRegisterSchema = Joi.object({
 
 // ... userOnboardingSchema যা ছিল তাই থাকবে ...
 const userOnboardingSchema = Joi.object({
-  institution: Joi.string().hex().length(24).required(),
-  department: Joi.string().hex().length(24).required(),
-  session: Joi.string().optional(),
+  institution: Joi.string().hex().length(24).optional().allow(""),
+  department: Joi.string().hex().length(24).optional().allow(""),
+  session: Joi.string().optional().allow(""),
   section: Joi.string().optional().allow(""),
   studentId: Joi.string().optional().allow(""),
   teacherId: Joi.string().optional().allow(""),
-  rank: Joi.string().optional(),
+  rank: Joi.string().optional().allow(""),
   officeHours: Joi.array().optional(),
 });
 

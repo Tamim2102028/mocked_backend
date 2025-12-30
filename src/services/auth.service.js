@@ -2,6 +2,8 @@ import { User } from "../models/user.model.js";
 import { Friendship } from "../models/friendship.model.js";
 import { Follow } from "../models/follow.model.js";
 import { Post } from "../models/post.model.js";
+import { Institution } from "../models/institution.model.js";
+import { Department } from "../models/department.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
 import { findInstitutionByEmailDomain } from "./academic.service.js";
@@ -88,9 +90,10 @@ export const registerUserService = async (userData, files) => {
   }
 
   const user = await User.create(userPayload);
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const createdUser = await User.findById(user._id)
+    .select("-password -refreshToken")
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo");
 
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
@@ -130,9 +133,10 @@ export const loginUserService = async ({ email, userName, password }) => {
     user._id
   );
 
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const loggedInUser = await User.findById(user._id)
+    .select("-password -refreshToken")
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo");
 
   return { user: loggedInUser, accessToken, refreshToken };
 };
@@ -208,8 +212,8 @@ export const updateAcademicProfileService = async (
   updateData
 ) => {
   const {
-    institution,
-    department,
+    institution: institutionId,
+    department: departmentId,
     session,
     section,
     studentId,
@@ -218,28 +222,59 @@ export const updateAcademicProfileService = async (
     officeHours,
   } = updateData;
 
-  if (!institution || !department) {
+  const existingUser = await User.findById(userId);
+  if (!existingUser) throw new ApiError(404, "User not found");
+
+  // Verify and set Institution
+  let effectiveInstitution = existingUser.institution;
+  if (institutionId) {
+    const inst = await Institution.findById(institutionId);
+    if (!inst)
+      throw new ApiError(404, "Institution not found with provided ID");
+    effectiveInstitution = institutionId;
+  }
+
+  // Verify and set Department
+  let effectiveDepartment = existingUser.academicInfo?.department;
+  if (departmentId) {
+    const dept = await Department.findById(departmentId);
+    if (!dept) throw new ApiError(404, "Department not found with provided ID");
+    effectiveDepartment = departmentId;
+  }
+
+  if (!effectiveInstitution || !effectiveDepartment) {
     throw new ApiError(400, "Institution and Department are required");
   }
 
-  let academicInfoPayload = { department };
+  let academicInfoPayload = {
+    ...(existingUser.academicInfo ? existingUser.academicInfo.toObject() : {}),
+    department: effectiveDepartment,
+  };
 
   if (userType === USER_TYPES.STUDENT) {
-    if (!session) throw new ApiError(400, "Session is required for Students");
-    academicInfoPayload.session = session;
-    academicInfoPayload.section = section;
-    academicInfoPayload.studentId = studentId;
+    if (session) academicInfoPayload.session = session;
+    if (section !== undefined) academicInfoPayload.section = section;
+    if (studentId !== undefined) academicInfoPayload.studentId = studentId;
   } else if (userType === USER_TYPES.TEACHER) {
-    academicInfoPayload.teacherId = teacherId;
-    academicInfoPayload.rank = rank;
-    academicInfoPayload.officeHours = officeHours;
+    if (teacherId !== undefined) academicInfoPayload.teacherId = teacherId;
+    if (rank !== undefined) academicInfoPayload.rank = rank;
+    if (officeHours !== undefined)
+      academicInfoPayload.officeHours = officeHours;
   }
 
   const user = await User.findByIdAndUpdate(
     userId,
-    { $set: { institution, academicInfo: academicInfoPayload } },
+    {
+      $set: {
+        institution: effectiveInstitution,
+        academicInfo: academicInfoPayload,
+      },
+    },
     { new: true }
-  ).select("-password -refreshToken");
+  )
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo")
+    .select("-password -refreshToken");
 
   return { user };
 };
@@ -258,13 +293,16 @@ export const updateUserAvatarService = async (userId, avatarLocalPath) => {
     throw new ApiError(500, "Error uploading avatar");
   }
 
-  await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     userId,
     { $set: { avatar: avatar.url } },
     { new: true }
-  ).select("-password");
+  )
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo")
+    .select("-password");
 
-  return { url: avatar.url };
+  return { user };
 };
 
 // ==========================================
@@ -284,13 +322,16 @@ export const updateUserCoverImageService = async (
     throw new ApiError(500, "Error uploading cover image");
   }
 
-  await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     userId,
     { $set: { coverImage: coverImage.url } },
     { new: true }
-  ).select("-password");
+  )
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo")
+    .select("-password");
 
-  return { url: coverImage.url };
+  return { user };
 };
 
 // ==========================================
@@ -339,8 +380,8 @@ export const getUserProfileHeaderService = async (
 
   const user = await User.findOne({ userName: targetUsername })
     .select("-password -refreshToken")
-    .populate("institution", "name logo")
-    .populate("academicInfo.department", "name code");
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo");
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -417,8 +458,8 @@ export const getUserDetailsService = async (username) => {
   const user = await User.findOne({ userName: username })
     .select("-password -refreshToken")
     .populate([
-      { path: "institution", select: "name" },
-      { path: "academicInfo.department", select: "name" },
+      { path: "institution", select: "name code logo" },
+      { path: "academicInfo.department", select: "name code logo" },
     ]);
 
   if (!user) {

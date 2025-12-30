@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
 import { createPostService } from "../services/common/post.service.js";
+import { Department } from "../models/department.model.js";
 
 // 🚀 1. GET DEPT FEED
 const getDeptFeed = asyncHandler(async (req, res) => {
@@ -90,6 +91,42 @@ const getTeachers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { teachers }, "Teachers list fetched"));
 });
 
-// (Moved to dedicated controllers)
+// 🚀 5. SEARCH DEPARTMENTS
+const searchDepartments = asyncHandler(async (req, res) => {
+  const { instId, q } = req.query;
 
-export { getDeptFeed, createDeptPost, getDeptDetails, getTeachers };
+  if (!instId) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Institution ID is required"));
+  }
+
+  const query = {
+    institution: instId,
+  };
+
+  if (q) {
+    query.$or = [
+      { name: { $regex: q, $options: "i" } },
+      { code: { $regex: q, $options: "i" } },
+    ];
+  }
+
+  const departments = await Department.find(query)
+    .select("name code")
+    .limit(20);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, { departments }, "Departments searched successfully")
+    );
+});
+
+export {
+  getDeptFeed,
+  createDeptPost,
+  getDeptDetails,
+  getTeachers,
+  searchDepartments,
+};

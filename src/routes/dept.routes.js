@@ -5,6 +5,7 @@ import {
   createDeptPost,
   getDeptDetails,
   getTeachers,
+  searchDepartments,
 } from "../controllers/dept.controllers.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ router.use(verifyJWT);
 
 // (Moved to unified follow router)
 
+router.get("/search", searchDepartments);
 router.get("/:deptId", getDeptDetails);
 router.get("/:deptId/feed", getDeptFeed);
 router.get("/:deptId/teachers", getTeachers);

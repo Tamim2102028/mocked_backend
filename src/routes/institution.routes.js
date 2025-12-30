@@ -5,11 +5,13 @@ import {
   createInstitutionPost,
   getInstitutionDetails,
   getDepartmentsList,
+  searchInstitutions,
 } from "../controllers/institution.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);
 
+router.get("/search", searchInstitutions);
 router.get("/:instId", getInstitutionDetails);
 router.get("/:instId/feed", getInstitutionFeed);
 router.get("/:instId/departments", getDepartmentsList);

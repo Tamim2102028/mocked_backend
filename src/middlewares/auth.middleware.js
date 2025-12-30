@@ -15,10 +15,11 @@ const verifyJWT = asyncHandler(async (req, _, next) => {
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    // ✅ সঠিক এবং নিরাপদ কুয়েরি
-    const user = await User.findById(decodedToken?._id).select(
-      "-password -refreshToken"
-    );
+    // ✅ Populated query for academic data
+    const user = await User.findById(decodedToken?._id)
+      .select("-password -refreshToken")
+      .populate("institution", "name code logo")
+      .populate("academicInfo.department", "name code logo");
 
     if (!user) {
       throw new ApiError(401, "Invalid Access Token. User does not exist.");

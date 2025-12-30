@@ -49,30 +49,21 @@ const updateAcademicProfile = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
-  const { avatarUrl } = await updateUserAvatarService(
-    req.user._id,
-    avatarLocalPath
-  );
+  const { user } = await updateUserAvatarService(req.user._id, avatarLocalPath);
   return res
     .status(200)
-    .json(new ApiResponse(200, { avatarUrl }, "Avatar updated successfully"));
+    .json(new ApiResponse(200, { user }, "Avatar updated successfully"));
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
-  const { coverImageUrl } = await updateUserCoverImageService(
+  const { user } = await updateUserCoverImageService(
     req.user._id,
     coverImageLocalPath
   );
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { coverImageUrl },
-        "Cover image updated successfully"
-      )
-    );
+    .json(new ApiResponse(200, { user }, "Cover image updated successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {

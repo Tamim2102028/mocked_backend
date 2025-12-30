@@ -241,7 +241,7 @@ export const updateAcademicProfileService = async (
     { new: true }
   ).select("-password -refreshToken");
 
-  return user;
+  return { user };
 };
 
 // ==========================================
@@ -323,7 +323,7 @@ export const updateAccountDetailsService = async (userId, updateData) => {
     { new: true }
   ).select("-password -refreshToken");
 
-  return user;
+  return { user };
 };
 
 // ==========================================
@@ -348,13 +348,12 @@ export const getUserProfileHeaderService = async (
 
   const isSelf =
     currentUserId && currentUserId.toString() === user._id.toString();
-  let relationStatus = PROFILE_RELATION_STATUS.NOT_FRIENDS;
+  let relationStatus = null;
   let isFollowing = false;
   let isBlockedByMe = false;
   let isBlockedByTarget = false;
 
   if (isSelf) {
-    relationStatus = PROFILE_RELATION_STATUS.SELF;
   } else if (currentUserId) {
     // Friendship Status
     const friendship = await Friendship.findOne({
@@ -426,5 +425,5 @@ export const getUserDetailsService = async (username) => {
     throw new ApiError(404, "User not found");
   }
 
-  return user;
+  return { user };
 };

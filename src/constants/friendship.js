@@ -18,10 +18,8 @@ export const FRIEND_REQUEST_POLICY = {
 
 // 🎨 Frontend/UI State: Used for Profile Buttons & Logic (Computed)
 export const PROFILE_RELATION_STATUS = {
-  NOT_FRIENDS: "NOT_FRIENDS", // No connection in DB
   FRIEND: "FRIEND", // DB status: ACCEPTED
   REQUEST_SENT: "REQUEST_SENT", // DB status: PENDING (Requester = Me)
   REQUEST_RECEIVED: "REQUEST_RECEIVED", // DB status: PENDING (Recipient = Me)
   BLOCKED: "BLOCKED", // DB status: BLOCKED
-  SELF: "SELF", // My own profile
 };

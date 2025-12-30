@@ -347,13 +347,16 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
   const { slug } = req.params;
+  const { page, limit } = req.query;
 
   const group = await Group.findOne({ slug });
   if (!group) throw new ApiError(404, "Group not found");
 
   const { members, pagination } = await groupServices.getGroupMembersService(
     group._id,
-    req.user._id
+    req.user._id,
+    page,
+    limit
   );
 
   return res

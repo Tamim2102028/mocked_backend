@@ -1,5 +1,6 @@
 import { Group } from "../models/group.model.js";
 import { GroupMembership } from "../models/groupMembership.model.js";
+import { Friendship } from "../models/friendship.model.js"; // Import Friendship
 import {
   GROUP_TYPES,
   GROUP_ROLES,
@@ -8,6 +9,8 @@ import {
   GROUP_JOIN_METHOD,
   POST_TARGET_MODELS,
   REACTION_TARGET_MODELS,
+  PROFILE_RELATION_STATUS, // Import Profile Status
+  FRIENDSHIP_STATUS, // Import Friendship Status
 } from "../constants/index.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
@@ -16,6 +19,7 @@ import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { Comment } from "../models/comment.model.js";
 import { createPostService } from "./common/post.service.js";
+import { mapUserToResponse } from "../utils/responseMappers.js"; // Import Mapper
 
 const groupActions = {
   createGroupService: async (
@@ -974,7 +978,12 @@ const groupServices = {
     return { group, meta };
   },
 
-  getGroupMembersService: async (groupId, page = 1, limit = 10) => {
+  getGroupMembersService: async (
+    groupId,
+    currentUserId,
+    page = 1,
+    limit = 10
+  ) => {
     const skip = (page - 1) * limit;
 
     // Verify group exists
@@ -993,7 +1002,14 @@ const groupServices = {
       group: groupId,
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
     })
-      .populate("user", "name username avatar")
+      .populate(
+        "user",
+        "fullName userName avatar academicInfo userType institution"
+      )
+      .populate([
+        { path: "user.institution", select: "name" },
+        { path: "user.academicInfo.department", select: "name" },
+      ])
       .sort({ role: 1, createdAt: 1 }) // Owner -> Admin -> Member
       .skip(skip)
       .limit(Number(limit));
@@ -1003,20 +1019,68 @@ const groupServices = {
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
     });
 
-    // Format response
-    const members = membersData.map((m) => ({
-      member: {
-        _id: m._id,
-        user: m.user,
-        role: m.role,
-        joinedAt: m.joinedAt || m.createdAt,
-      },
-      meta: {
-        isFriend: false, // TODO: Implement friend check
-        hasPendingRequest: false,
-        isSentRequest: false,
-      },
-    }));
+    // Populate deeply for institution/department manually if populate above fails (Mongoose deep populate syntax varies)
+    // Actually standard populate in 'user' projection + populate options is better but let's assume 'user' is populated.
+    // We need to fetch Friendships for these members relative to currentUserId
+
+    const memberUserIds = membersData.map((m) => m.user._id);
+
+    // Find Friendships where (requester=ME and recipient=MEMBER) OR (requester=MEMBER and recipient=ME)
+    const friendships = await Friendship.find({
+      $or: [
+        { requester: currentUserId, recipient: { $in: memberUserIds } },
+        { requester: { $in: memberUserIds }, recipient: currentUserId },
+      ],
+    });
+
+    // Map friendship status by User ID
+    const friendshipMap = {}; // userId -> { status, id }
+    friendships.forEach((f) => {
+      const isRequester = f.requester.toString() === currentUserId.toString();
+      const otherUserId = isRequester
+        ? f.recipient.toString()
+        : f.requester.toString();
+
+      let status = null;
+      if (f.status === FRIENDSHIP_STATUS.ACCEPTED) {
+        status = PROFILE_RELATION_STATUS.FRIEND;
+      } else if (f.status === FRIENDSHIP_STATUS.PENDING) {
+        status = isRequester
+          ? PROFILE_RELATION_STATUS.REQUEST_SENT
+          : PROFILE_RELATION_STATUS.REQUEST_RECEIVED;
+      } else if (f.status === FRIENDSHIP_STATUS.BLOCKED) {
+        status = PROFILE_RELATION_STATUS.BLOCKED;
+      }
+
+      friendshipMap[otherUserId] = { status, id: f._id };
+    });
+
+    // Format response using mapUserToResponse
+    const members = membersData
+      .map((m) => {
+        // Map user
+        const mapped = mapUserToResponse(m.user);
+        if (!mapped) return null;
+
+        // Add Friendship Info
+        const fsInfo = friendshipMap[m.user._id.toString()];
+        if (fsInfo) {
+          mapped.meta.friendshipStatus = fsInfo.status;
+          mapped.meta.friendshipId = fsInfo.id;
+        }
+
+        // Add Group Role & Membership Info
+        mapped.meta.role = m.role;
+        mapped.meta.joinedAt = m.joinedAt || m.createdAt;
+        mapped.meta.memberId = m._id; // Membership ID
+
+        if (m.user._id.toString() === currentUserId.toString()) {
+          mapped.meta.friendshipStatus = PROFILE_RELATION_STATUS.SELF;
+        }
+
+        return mapped;
+      })
+      .filter(Boolean);
 
     const totalPages = Math.ceil(totalDocs / limit);
     const hasNextPage = page < totalPages;

@@ -100,11 +100,6 @@ const updateProfilePost = asyncHandler(async (req, res) => {
 });
 
 // -----------------------------
-// Post Comments
-// -----------------------------
-// (Moved to dedicated controllers)
-
-// -----------------------------
 // Profile Updates / Onboarding (moved)
 // -----------------------------
 const updateAcademicProfile = asyncHandler(async (req, res) => {

@@ -22,17 +22,7 @@ import {
   removeMember,
   assignAdmin,
   revokeAdmin,
-  toggleGroupPostLike,
-  toggleGroupPostRead,
-  toggleGroupPostPin,
-  deleteGroupPost,
-  updateGroupPost,
-  getGroupPostComments,
   getGroupPinnedPosts,
-  createGroupPostComment,
-  deleteGroupPostComment,
-  updateGroupPostComment,
-  toggleGroupPostCommentLike,
 } from "../controllers/group.controllers.js";
 import { uploadImage } from "../middlewares/multer.middleware.js";
 

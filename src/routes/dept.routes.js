@@ -5,16 +5,6 @@ import {
   createDeptPost,
   getDeptDetails,
   getTeachers,
-  toggleDeptPostLike,
-  toggleDeptPostRead,
-  deleteDeptPost,
-  updateDeptPost,
-  getDeptPostComments,
-  createDeptPostComment,
-  deleteDeptPostComment,
-  updateDeptPostComment,
-  toggleDeptPostCommentLike,
-  toggleDeptFollow,
 } from "../controllers/dept.controllers.js";
 
 const router = Router();

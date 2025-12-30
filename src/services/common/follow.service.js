@@ -1,10 +1,13 @@
-import { Follow } from "../models/follow.model.js";
-import { User } from "../models/user.model.js";
-import { Institution } from "../models/institution.model.js";
-import { Department } from "../models/department.model.js";
-import { Friendship } from "../models/friendship.model.js";
-import { FOLLOW_TARGET_MODELS, FRIENDSHIP_STATUS } from "../constants/index.js";
-import { ApiError } from "../utils/ApiError.js";
+import { Follow } from "../../models/follow.model.js";
+import { User } from "../../models/user.model.js";
+import { Institution } from "../../models/institution.model.js";
+import { Department } from "../../models/department.model.js";
+import { Friendship } from "../../models/friendship.model.js";
+import {
+  FOLLOW_TARGET_MODELS,
+  FRIENDSHIP_STATUS,
+} from "../../constants/index.js";
+import { ApiError } from "../../utils/ApiError.js";
 
 export const toggleFollowService = async (
   targetId,

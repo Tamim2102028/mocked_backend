@@ -103,8 +103,6 @@ const createPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { post, meta }, "Post created successfully"));
 });
 
-export { createPost };
-
 // Toggle Like
 const togglePostLike = asyncHandler(async (req, res) => {
   const { postId } = req.params;

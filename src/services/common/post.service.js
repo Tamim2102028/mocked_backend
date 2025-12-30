@@ -1,26 +1,20 @@
-// ==========================================
-// post.service.js
-// ==========================================
-import mongoose from "mongoose";
-import { User } from "../models/user.model.js";
-import { Post } from "../models/post.model.js";
-import { ReadPost } from "../models/readPost.model.js";
-import { Reaction } from "../models/reaction.model.js";
-import { Comment } from "../models/comment.model.js";
-import { Friendship } from "../models/friendship.model.js";
-import { Group } from "../models/group.model.js";
-import { GroupMembership } from "../models/groupMembership.model.js";
+import { Post } from "../../models/post.model.js";
+import { Reaction } from "../../models/reaction.model.js";
+import { ReadPost } from "../../models/readPost.model.js";
+import { Group } from "../../models/group.model.js";
+import { User } from "../../models/user.model.js";
+import { Department } from "../../models/department.model.js";
+import { Institution } from "../../models/institution.model.js";
+import { GroupMembership } from "../../models/groupMembership.model.js";
 import {
   POST_TARGET_MODELS,
   POST_TYPES,
   POST_VISIBILITY,
   REACTION_TARGET_MODELS,
-  FRIENDSHIP_STATUS,
   GROUP_ROLES,
-} from "../constants/index.js";
-import { ApiError } from "../utils/ApiError.js";
+} from "../../constants/index.js";
+import { ApiError } from "../../utils/ApiError.js";
 
-// === Create Post Service ===
 export const createPostService = async (postData, authorId) => {
   const {
     content,
@@ -33,7 +27,6 @@ export const createPostService = async (postData, authorId) => {
     tags,
   } = postData;
 
-  // Validations
   if (!content || !type || !postOnModel || !postOnId) {
     throw new ApiError(400, "All fields are required");
   }

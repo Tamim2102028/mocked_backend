@@ -1,6 +1,13 @@
 import { Router } from "express";
 import { verifyJWT } from "../../middlewares/auth.middleware.js";
-import { togglePostPin } from "../../controllers/common/post.controllers.js";
+import {
+  togglePostPin,
+  togglePostRead,
+  togglePostLike,
+  createPost,
+  updatePost,
+  deletePost,
+} from "../../controllers/common/post.controllers.js";
 
 const router = Router();
 

@@ -1,8 +1,8 @@
-import { Comment } from "../models/comment.model.js";
-import { Post } from "../models/post.model.js";
-import { Reaction } from "../models/reaction.model.js";
-import { REACTION_TARGET_MODELS } from "../constants/index.js";
-import { ApiError } from "../utils/ApiError.js";
+import { Comment } from "../../models/comment.model.js";
+import { Post } from "../../models/post.model.js";
+import { Reaction } from "../../models/reaction.model.js";
+import { REACTION_TARGET_MODELS } from "../../constants/index.js";
+import { ApiError } from "../../utils/ApiError.js";
 
 export const getPostCommentsService = async (
   postId,

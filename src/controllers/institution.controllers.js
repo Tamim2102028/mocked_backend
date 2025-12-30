@@ -1,7 +1,7 @@
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { ApiResponse } from "../../utils/ApiResponse.js";
-import { POST_TARGET_MODELS, POST_TYPES } from "../../constants/index.js";
-import { createPostService } from "../../services/common/post.service.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { POST_TARGET_MODELS, POST_TYPES } from "../constants/index.js";
+import { createPostService } from "../services/common/post.service.js";
 import mongoose from "mongoose";
 
 const _objectId = () => new mongoose.Types.ObjectId().toString();

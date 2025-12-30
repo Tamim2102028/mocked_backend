@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { verifyJWT } from "../../middlewares/auth.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   getInstitutionFeed,
   createInstitutionPost,
   getInstitutionDetails,
   getDepartmentsList,
-} from "../../controllers/institution.controllers.js";
+} from "../controllers/institution.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);

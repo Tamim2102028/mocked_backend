@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyJWT } from "../../middlewares/auth.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   getFriendsList,
   getReceivedRequests,
@@ -12,7 +12,7 @@ import {
   unfriendUser,
   blockUser,
   unblockUser,
-} from "../../controllers/friendship.controllers.js";
+} from "../controllers/friendship.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);

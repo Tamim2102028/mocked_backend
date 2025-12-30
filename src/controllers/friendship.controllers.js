@@ -1,14 +1,14 @@
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { ApiResponse } from "../../utils/ApiResponse.js";
-import { ApiError } from "../../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
 import {
   FOLLOW_TARGET_MODELS,
   FRIENDSHIP_STATUS,
   PROFILE_RELATION_STATUS,
-} from "../../constants/index.js";
-import { Friendship } from "../../models/friendship.model.js";
-import { User } from "../../models/user.model.js";
-import { Follow } from "../../models/follow.model.js";
+} from "../constants/index.js";
+import { Friendship } from "../models/friendship.model.js";
+import { User } from "../models/user.model.js";
+import { Follow } from "../models/follow.model.js";
 
 // Helper to format user response
 const mapUserToResponse = (

@@ -1,7 +1,7 @@
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { ApiResponse } from "../../utils/ApiResponse.js";
-import { ApiError } from "../../utils/ApiError.js";
-import { getUserProfilePostsService } from "../../services/profile.service.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
+import { getUserProfilePostsService } from "../services/profile.service.js";
 import {
   updateAcademicProfileService,
   updateUserAvatarService,
@@ -9,14 +9,14 @@ import {
   updateAccountDetailsService,
   getUserProfileHeaderService,
   getUserDetailsService,
-} from "../../services/auth.service.js";
+} from "../services/auth.service.js";
 import {
   createPostService,
   toggleLikePostService,
   toggleMarkAsReadService,
   deletePostService,
   updatePostService,
-} from "../../services/common/post.service.js";
+} from "../services/common/post.service.js";
 
 // -----------------------------
 // Profile Posts

@@ -27,17 +27,17 @@ app.use(cookieParser());
 // });
 
 // Import and use routes
-import authRouter from "./routes/common/auth.routes.js";
+import authRouter from "./routes/auth.routes.js";
 app.use("/api/v1/users", authRouter);
 
 import { errorHandler } from "./middlewares/error.middleware.js";
-import crRouter from "./routes/common/cr.routes.js";
-import groupRouter from "./routes/common/group.routes.js";
-import deptRouter from "./routes/common/dept.routes.js";
-import roomRouter from "./routes/common/room.routes.js";
-import institutionRouter from "./routes/common/institution.routes.js";
-import friendshipRouter from "./routes/common/friendship.routes.js";
-import profileRouter from "./routes/common/profile.routes.js";
+import crRouter from "./routes/cr.routes.js";
+import groupRouter from "./routes/group.routes.js";
+import deptRouter from "./routes/dept.routes.js";
+import roomRouter from "./routes/room.routes.js";
+import institutionRouter from "./routes/institution.routes.js";
+import friendshipRouter from "./routes/friendship.routes.js";
+import profileRouter from "./routes/profile.routes.js";
 import postRouter from "./routes/common/post.routes.js";
 import commentRouter from "./routes/common/comment.routes.js";
 import followRouter from "./routes/common/follow.routes.js";

@@ -37,9 +37,6 @@ const userSchema = new Schema(
     phoneNumber: {
       type: String,
       trim: true,
-      unique: true,
-      sparse: true,
-      index: true,
     },
 
     // --- Profile ---

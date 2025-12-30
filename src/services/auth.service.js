@@ -342,27 +342,18 @@ export const updateAccountDetailsService = async (userId, updateData) => {
     throw new ApiError(400, "Username cannot be changed.");
   }
 
-  const { phoneNumber } = updateData;
-
   if (Object.keys(updateData).length === 0) {
     throw new ApiError(400, "At least one field is required to update");
-  }
-
-  if (phoneNumber) {
-    const existingPhoneUser = await User.findOne({ phoneNumber });
-    if (
-      existingPhoneUser &&
-      existingPhoneUser._id.toString() !== userId.toString()
-    ) {
-      throw new ApiError(409, "Phone number already used by another account");
-    }
   }
 
   const user = await User.findByIdAndUpdate(
     userId,
     { $set: updateData },
     { new: true }
-  ).select("-password -refreshToken");
+  )
+    .populate("institution", "name code logo")
+    .populate("academicInfo.department", "name code logo")
+    .select("-password -refreshToken");
 
   return { user };
 };

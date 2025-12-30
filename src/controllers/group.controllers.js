@@ -476,9 +476,7 @@ const getGroupPinnedPosts = asyncHandler(async (req, res) => {
     );
 });
 
-// ==========================================
-// 🚀 19. CREATE GROUP POST
-// ==========================================
+// post related
 const createGroupPost = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const postData = req.body;
@@ -497,9 +495,6 @@ const createGroupPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { post, meta }, "Group post created"));
 });
 
-// ==========================================
-// 🚀 20. TOGGLE LIKE GROUP POST
-// ==========================================
 const toggleGroupPostLike = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
@@ -512,9 +507,6 @@ const toggleGroupPostLike = asyncHandler(async (req, res) => {
     );
 });
 
-// ==========================================
-// 🚀 21. TOGGLE MARK AS READ
-// ==========================================
 const toggleGroupPostRead = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
@@ -531,9 +523,6 @@ const toggleGroupPostRead = asyncHandler(async (req, res) => {
     );
 });
 
-// ==========================================
-// 🚀 TOGGLE PIN GROUP POST (Admin/Owner only)
-// ==========================================
 const toggleGroupPostPin = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
@@ -550,9 +539,6 @@ const toggleGroupPostPin = asyncHandler(async (req, res) => {
     );
 });
 
-// ==========================================
-// 🚀 22. DELETE GROUP POST
-// ==========================================
 const deleteGroupPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 
@@ -572,9 +558,6 @@ const deleteGroupPost = asyncHandler(async (req, res) => {
     );
 });
 
-// ==========================================
-// 🚀 23. UPDATE GROUP POST
-// ==========================================
 const updateGroupPost = asyncHandler(async (req, res) => {
   const { postId } = req.params;
 

@@ -29,74 +29,115 @@ const createPost = asyncHandler(async (req, res) => {
     throw new ApiError(400, "postOnModel and postOnId are required");
   }
 
-  // Handle Group Specific Logic
-  if (postOnModel === POST_TARGET_MODELS.GROUP) {
-    // 1. Find Group (Verify it exists)
-    const group = await Group.findById(postOnId);
-    if (!group) {
-      throw new ApiError(404, "Group not found");
+  let result;
+
+  switch (postOnModel) {
+    case POST_TARGET_MODELS.USER: {
+      // 1. Validation
+      if (postOnId.toString() !== userId.toString()) {
+        throw new ApiError(403, "You can only post on your own profile");
+      }
+
+      // 2. Create Post
+      result = await createPostService(req.body, userId);
+
+      // 3. Post-Creation Side Effects
+      const userUpdate = await User.findByIdAndUpdate(postOnId, {
+        $inc: { postsCount: 1 },
+      });
+      if (!userUpdate) {
+        throw new ApiError(500, "Failed to update user profile posts count");
+      }
+      break;
     }
 
-    // 2. Check Membership
-    const membership = await GroupMembership.findOne({
-      group: postOnId,
-      user: userId,
-      status: GROUP_MEMBERSHIP_STATUS.JOINED,
-    });
+    case POST_TARGET_MODELS.GROUP: {
+      // 1. Validation (Group Existence & Membership)
+      const group = await Group.findById(postOnId);
+      if (!group) {
+        throw new ApiError(404, "Group not found");
+      }
 
-    if (!membership) {
-      throw new ApiError(403, "You must be a member to post in this group");
+      const membership = await GroupMembership.findOne({
+        group: postOnId,
+        user: userId,
+        status: GROUP_MEMBERSHIP_STATUS.JOINED,
+      });
+
+      if (!membership) {
+        throw new ApiError(403, "You must be a member to post in this group");
+      }
+
+      if (
+        membership.role === GROUP_ROLES.MEMBER &&
+        group.settings?.allowMemberPosting === false
+      ) {
+        throw new ApiError(
+          403,
+          "Posting is disabled for members in this group"
+        );
+      }
+
+      // 2. Create Post
+      result = await createPostService(req.body, userId);
+
+      // 3. Post-Creation Side Effects
+      const groupUpdate = await Group.findByIdAndUpdate(postOnId, {
+        $inc: { postsCount: 1 },
+      });
+      if (!groupUpdate) {
+        throw new ApiError(500, "Failed to update group posts count");
+      }
+      break;
     }
 
-    // 3. Check Settings (Allow Member Posting)
-    if (
-      membership.role === GROUP_ROLES.MEMBER &&
-      group.settings?.allowMemberPosting === false
-    ) {
-      throw new ApiError(403, "Posting is disabled for members in this group");
+    case POST_TARGET_MODELS.DEPARTMENT: {
+      // 1. TODO: Department specific validation (if any)
+
+      // 2. Create Post
+      result = await createPostService(req.body, userId);
+
+      // 3. Post-Creation Side Effects
+      const deptUpdate = await Department.findByIdAndUpdate(postOnId, {
+        $inc: { postsCount: 1 },
+      });
+      if (!deptUpdate) {
+        throw new ApiError(500, "Failed to update department posts count");
+      }
+      break;
     }
+
+    case POST_TARGET_MODELS.INSTITUTION: {
+      // 1. TODO: Institution specific validation (if any)
+
+      // 2. Create Post
+      result = await createPostService(req.body, userId);
+
+      // 3. Post-Creation Side Effects
+      const instUpdate = await Institution.findByIdAndUpdate(postOnId, {
+        $inc: { postsCount: 1 },
+      });
+      if (!instUpdate) {
+        throw new ApiError(500, "Failed to update institution posts count");
+      }
+      break;
+    }
+
+    case POST_TARGET_MODELS.ROOM: {
+      // 1. TODO: Room specific validation
+
+      // 2. Create Post
+      result = await createPostService(req.body, userId);
+
+      // 3. Post-Creation Side Effects (if any)
+      break;
+    }
+
+    default:
+      throw new ApiError(400, "Invalid postOnModel");
   }
 
-  // Handle User (Profile) Specific Logic
-  if (postOnModel === POST_TARGET_MODELS.USER) {
-    if (postOnId.toString() !== userId.toString()) {
-      throw new ApiError(403, "You can only post on your own profile");
-    }
-  }
-
-  // Create Post using common service
-  const { post, meta } = await createPostService(req.body, userId);
-
-  // Post-Creation Actions
-  if (postOnModel === POST_TARGET_MODELS.GROUP) {
-    const groupUpdate = await Group.findByIdAndUpdate(postOnId, {
-      $inc: { postsCount: 1 },
-    });
-    if (!groupUpdate) {
-      throw new ApiError(500, "Failed to update group posts count");
-    }
-  } else if (postOnModel === POST_TARGET_MODELS.USER) {
-    const userUpdate = await User.findByIdAndUpdate(postOnId, {
-      $inc: { postsCount: 1 },
-    });
-    if (!userUpdate) {
-      throw new ApiError(500, "Failed to update user profile posts count");
-    }
-  } else if (postOnModel === POST_TARGET_MODELS.DEPARTMENT) {
-    const deptUpdate = await Department.findByIdAndUpdate(postOnId, {
-      $inc: { postsCount: 1 },
-    });
-    if (!deptUpdate) {
-      throw new ApiError(500, "Failed to update department posts count");
-    }
-  } else if (postOnModel === POST_TARGET_MODELS.INSTITUTION) {
-    const instUpdate = await Institution.findByIdAndUpdate(postOnId, {
-      $inc: { postsCount: 1 },
-    });
-    if (!instUpdate) {
-      throw new ApiError(500, "Failed to update institution posts count");
-    }
-  }
+  const { post, meta } = result;
 
   return res
     .status(201)

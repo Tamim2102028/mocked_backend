@@ -38,7 +38,7 @@ const userSchema = new Schema(
       type: String,
       trim: true,
       unique: true,
-      sparse: true, // ✅ এটাই ম্যাজিক, ফোন নম্বর না থাকলে ইউনিক এরর দেবে না
+      sparse: true,
       index: true,
     },
 

@@ -24,6 +24,7 @@ import {
   updateCommentService,
   toggleCommentLikeService,
 } from "../services/comment.service.js";
+
 import { toggleFollowService } from "../services/follow.service.js";
 import { FOLLOW_TARGET_MODELS } from "../constants/index.js";
 
@@ -111,103 +112,7 @@ const updateProfilePost = asyncHandler(async (req, res) => {
 // -----------------------------
 // Post Comments
 // -----------------------------
-const getProfilePostComments = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
-  const { comments, pagination } = await getPostCommentsService(
-    postId,
-    page,
-    limit,
-    req.user._id
-  );
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { comments, pagination },
-        "Comments fetched successfully"
-      )
-    );
-});
-
-const createProfilePostComment = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { content } = req.body;
-  if (!content?.trim()) throw new ApiError(400, "Comment content is required");
-  const { comment, meta } = await addCommentService(
-    postId,
-    content,
-    req.user._id
-  );
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(201, { comment, meta }, "Comment added successfully")
-    );
-});
-
-const deleteProfilePostComment = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const { commentId: deletedCommentId } = await deleteCommentService(
-    commentId,
-    req.user._id
-  );
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { commentId: deletedCommentId },
-        "Comment deleted successfully"
-      )
-    );
-});
-
-const updateProfilePostComment = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const { content } = req.body;
-  if (!content?.trim()) throw new ApiError(400, "Content is required");
-  const { comment, meta } = await updateCommentService(
-    commentId,
-    content,
-    req.user._id
-  );
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, { comment, meta }, "Comment updated successfully")
-    );
-});
-
-const toggleProfilePostCommentLike = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const { isLiked } = await toggleCommentLikeService(commentId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { isLiked }, "Comment like toggled"));
-});
-
-// -----------------------------
-// Follow / Unfollow
-// -----------------------------
-const toggleProfileFollow = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const { isFollowing } = await toggleFollowService(
-    userId,
-    FOLLOW_TARGET_MODELS.USER,
-    req.user._id
-  );
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { isFollowing },
-        isFollowing ? "Followed successfully" : "Unfollowed successfully"
-      )
-    );
-});
+// (Moved to dedicated controllers)
 
 // -----------------------------
 // Profile Updates / Onboarding (moved)
@@ -293,12 +198,6 @@ export {
   toggleProfilePostRead,
   deleteProfilePost,
   updateProfilePost,
-  getProfilePostComments,
-  createProfilePostComment,
-  deleteProfilePostComment,
-  updateProfilePostComment,
-  toggleProfilePostCommentLike,
-  toggleProfileFollow,
   updateAcademicProfile,
   updateUserAvatar,
   updateUserCoverImage,

@@ -1,7 +1,14 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
-import { createPostService } from "../services/post.service.js";
+import {
+  createPostService,
+  toggleLikePostService,
+  toggleMarkAsReadService,
+  deletePostService,
+  updatePostService,
+  togglePinPostService,
+} from "../services/post.service.js";
 import { Group } from "../models/group.model.js";
 import { GroupMembership } from "../models/groupMembership.model.js";
 import { User } from "../models/user.model.js";
@@ -62,13 +69,33 @@ const createPost = asyncHandler(async (req, res) => {
 
   // Post-Creation Actions
   if (postOnModel === POST_TARGET_MODELS.GROUP) {
-    await Group.findByIdAndUpdate(postOnId, { $inc: { postsCount: 1 } });
+    const groupUpdate = await Group.findByIdAndUpdate(postOnId, {
+      $inc: { postsCount: 1 },
+    });
+    if (!groupUpdate) {
+      throw new ApiError(500, "Failed to update group posts count");
+    }
   } else if (postOnModel === POST_TARGET_MODELS.USER) {
-    await User.findByIdAndUpdate(postOnId, { $inc: { postsCount: 1 } });
+    const userUpdate = await User.findByIdAndUpdate(postOnId, {
+      $inc: { postsCount: 1 },
+    });
+    if (!userUpdate) {
+      throw new ApiError(500, "Failed to update user profile posts count");
+    }
   } else if (postOnModel === POST_TARGET_MODELS.DEPARTMENT) {
-    await Department.findByIdAndUpdate(postOnId, { $inc: { postsCount: 1 } });
+    const deptUpdate = await Department.findByIdAndUpdate(postOnId, {
+      $inc: { postsCount: 1 },
+    });
+    if (!deptUpdate) {
+      throw new ApiError(500, "Failed to update department posts count");
+    }
   } else if (postOnModel === POST_TARGET_MODELS.INSTITUTION) {
-    await Institution.findByIdAndUpdate(postOnId, { $inc: { postsCount: 1 } });
+    const instUpdate = await Institution.findByIdAndUpdate(postOnId, {
+      $inc: { postsCount: 1 },
+    });
+    if (!instUpdate) {
+      throw new ApiError(500, "Failed to update institution posts count");
+    }
   }
 
   return res
@@ -77,3 +104,104 @@ const createPost = asyncHandler(async (req, res) => {
 });
 
 export { createPost };
+
+// Toggle Like
+const togglePostLike = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { isLiked, likesCount } = await toggleLikePostService(
+    postId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isLiked, likesCount },
+        isLiked ? "Post liked" : "Post unliked"
+      )
+    );
+});
+
+// Toggle Mark as Read
+const togglePostRead = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { isRead } = await toggleMarkAsReadService(postId, req.user._id);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { isRead },
+        isRead ? "Marked as read" : "Marked as unread"
+      )
+    );
+});
+
+// Delete Post
+const deletePost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { postId: deletedPostId } = await deletePostService(
+    postId,
+    req.user._id
+  );
+
+  if (!deletedPostId) {
+    throw new ApiError(500, "Deletion failed at service layer");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { postId: deletedPostId },
+        "Post deleted successfully"
+      )
+    );
+});
+
+// Update Post
+const updatePost = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { post, meta } = await updatePostService(
+    postId,
+    req.user._id,
+    req.body
+  );
+
+  if (!post) {
+    throw new ApiError(404, "Post not found or update failed");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { post, meta }, "Post updated successfully"));
+});
+
+// Toggle Pin
+const togglePostPin = asyncHandler(async (req, res) => {
+  const { postId } = req.params;
+  const { post, meta } = await togglePinPostService(postId, req.user._id);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { post, meta },
+        post.isPinned ? "Post pinned" : "Post unpinned"
+      )
+    );
+});
+
+export {
+  createPost,
+  togglePostLike,
+  togglePostRead,
+  deletePost,
+  updatePost,
+  togglePostPin,
+};

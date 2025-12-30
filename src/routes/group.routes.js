@@ -82,16 +82,8 @@ router.patch("/:slug/members/:userId/revoke-admin", revokeAdmin);
 // ==========================================
 // 🚀 POST & COMMENT ACTIONS
 // ==========================================
-router.post("/posts/:postId/like", toggleGroupPostLike);
-router.post("/posts/:postId/read", toggleGroupPostRead);
-router.post("/posts/:postId/pin", toggleGroupPostPin);
-router.delete("/posts/:postId", deleteGroupPost);
-router.patch("/posts/:postId", updateGroupPost);
+// (Moved to unified post router)
 
-router.get("/posts/:postId/comments", getGroupPostComments);
-router.post("/posts/:postId/comments", createGroupPostComment);
-router.delete("/comments/:commentId", deleteGroupPostComment);
-router.patch("/comments/:commentId", updateGroupPostComment);
-router.post("/comments/:commentId/like", toggleGroupPostCommentLike);
+// (Moved to dedicated comment namespace)
 
 export default router;

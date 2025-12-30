@@ -41,8 +41,7 @@ router.get("/:username", getUserProfileHeader);
 // GET /profile/details/:username
 router.get("/details/:username", getUserDetails);
 
-// Follow / Unfollow a user
-router.post("/:userId/follow", toggleProfileFollow);
+// Follow / Unfollow (Moved to /follows)
 
 // update general details
 router.patch("/update-general", updateAccountDetails);
@@ -73,27 +72,11 @@ router.post("/post", createProfilePost);
 // ================================
 // Post actions
 // ================================
-// like / unlike
-router.post("/posts/:postId/like", toggleProfilePostLike);
-// mark as read / unread
-router.post("/posts/:postId/read", toggleProfilePostRead);
-// delete post
-router.delete("/posts/:postId", deleteProfilePost);
-// update post
-router.patch("/posts/:postId", updateProfilePost);
+// (Moved to unitifed post router)
 
 // ================================
 // Post Comments
 // ================================
-// get comments for a post
-router.get("/posts/:postId/comments", getProfilePostComments);
-// create comment for a post
-router.post("/posts/:postId/comments", createProfilePostComment);
-// delete comment
-router.delete("/comments/:commentId", deleteProfilePostComment);
-// update comment
-router.patch("/comments/:commentId", updateProfilePostComment);
-// like / unlike comment
-router.post("/comments/:commentId/like", toggleProfilePostCommentLike);
+// Post Comments (Moved to /comments)
 
 export default router;

@@ -401,10 +401,13 @@ const acceptFriendRequest = asyncHandler(async (req, res) => {
   await friendship.save();
 
   // ✅ Update connectionsCount for both users
-  await User.updateMany(
+  const countUpdate = await User.updateMany(
     { _id: { $in: [requesterId, currentUserId] } },
     { $inc: { connectionsCount: 1 } }
   );
+  if (!countUpdate.acknowledged || countUpdate.modifiedCount === 0) {
+    throw new ApiError(500, "Failed to update connections count");
+  }
 
   return res.status(200).json(
     new ApiResponse(
@@ -477,10 +480,16 @@ const unfriendUser = asyncHandler(async (req, res) => {
   }
 
   // ✅ Update connectionsCount for both users
-  await User.updateMany(
+  const countUpdate = await User.updateMany(
     { _id: { $in: [targetUserId, currentUserId] } },
     { $inc: { connectionsCount: -1 } }
   );
+  if (!countUpdate.acknowledged || countUpdate.modifiedCount === 0) {
+    throw new ApiError(
+      500,
+      "Failed to update connections count during unfriend"
+    );
+  }
 
   return res
     .status(200)
@@ -536,10 +545,16 @@ const blockUser = asyncHandler(async (req, res) => {
 
   if (oldFriendship && oldFriendship.status === FRIENDSHIP_STATUS.ACCEPTED) {
     // ✅ Update connectionsCount for both users if they were friends
-    await User.updateMany(
+    const countUpdate = await User.updateMany(
       { _id: { $in: [targetUserId, currentUserId] } },
       { $inc: { connectionsCount: -1 } }
     );
+    if (!countUpdate.acknowledged || countUpdate.modifiedCount === 0) {
+      throw new ApiError(
+        500,
+        "Failed to update connections count during block"
+      );
+    }
   }
 
   // 3. Remove any existing follows (both ways)

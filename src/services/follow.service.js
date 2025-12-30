@@ -82,10 +82,18 @@ export const toggleFollowService = async (
 
     // ✅ Update counts only if target is a User
     if (targetModel === FOLLOW_TARGET_MODELS.USER) {
-      await User.findByIdAndUpdate(currentUserId, {
+      const followingUpdate = await User.findByIdAndUpdate(currentUserId, {
         $inc: { followingCount: -1 },
       });
-      await User.findByIdAndUpdate(targetId, { $inc: { followersCount: -1 } });
+      if (!followingUpdate) {
+        throw new ApiError(500, "Failed to update your following count");
+      }
+      const followerUpdate = await User.findByIdAndUpdate(targetId, {
+        $inc: { followersCount: -1 },
+      });
+      if (!followerUpdate) {
+        throw new ApiError(500, "Failed to update target's followers count");
+      }
     }
 
     return { isFollowing: false };
@@ -99,10 +107,18 @@ export const toggleFollowService = async (
 
     // ✅ Update counts only if target is a User
     if (targetModel === FOLLOW_TARGET_MODELS.USER) {
-      await User.findByIdAndUpdate(currentUserId, {
+      const followingUpdate = await User.findByIdAndUpdate(currentUserId, {
         $inc: { followingCount: 1 },
       });
-      await User.findByIdAndUpdate(targetId, { $inc: { followersCount: 1 } });
+      if (!followingUpdate) {
+        throw new ApiError(500, "Failed to update your following count");
+      }
+      const followerUpdate = await User.findByIdAndUpdate(targetId, {
+        $inc: { followersCount: 1 },
+      });
+      if (!followerUpdate) {
+        throw new ApiError(500, "Failed to update target's followers count");
+      }
     }
 
     return { isFollowing: true };

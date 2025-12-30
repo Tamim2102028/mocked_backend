@@ -5,21 +5,7 @@ import {
   POST_TYPES,
   FOLLOW_TARGET_MODELS,
 } from "../constants/index.js";
-import { toggleFollowService } from "../services/follow.service.js";
-import {
-  createPostService,
-  toggleLikePostService,
-  toggleMarkAsReadService,
-  deletePostService,
-  updatePostService,
-} from "../services/post.service.js";
-import {
-  getPostCommentsService,
-  addCommentService,
-  deleteCommentService,
-  updateCommentService,
-  toggleCommentLikeService,
-} from "../services/comment.service.js";
+import { createPostService } from "../services/post.service.js";
 import mongoose from "mongoose";
 
 const _objectId = () => new mongoose.Types.ObjectId().toString();
@@ -141,151 +127,11 @@ const getDepartmentsList = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { departments }, "Departments list fetched"));
 });
 
-// 🚀 TOGGLE FOLLOW INSTITUTION
-const toggleInstitutionFollow = asyncHandler(async (req, res) => {
-  const { instId } = req.params;
-
-  const { isFollowing } = await toggleFollowService(
-    instId,
-    FOLLOW_TARGET_MODELS.INSTITUTION,
-    req.user._id
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { isFollowing },
-        isFollowing ? "Followed institution" : "Unfollowed institution"
-      )
-    );
-});
-
-// ==========================================
-// 🚀 POST & COMMENT ACTIONS (Shared Logic)
-// ==========================================
-
-// 🚀 TOGGLE LIKE INSTITUTION POST
-const toggleInstitutionPostLike = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const result = await toggleLikePostService(postId, req.user._id);
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        result,
-        result.isLiked ? "Post liked" : "Post unliked"
-      )
-    );
-});
-
-// 🚀 TOGGLE MARK AS READ
-const toggleInstitutionPostRead = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const result = await toggleMarkAsReadService(postId, req.user._id);
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        result,
-        result.isRead ? "Marked as read" : "Marked as unread"
-      )
-    );
-});
-
-// 🚀 DELETE INSTITUTION POST
-const deleteInstitutionPost = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const result = await deletePostService(postId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "Post deleted successfully"));
-});
-
-// 🚀 UPDATE INSTITUTION POST
-const updateInstitutionPost = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const updatedPost = await updatePostService(postId, req.user._id, req.body);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, updatedPost, "Post updated successfully"));
-});
-
-// 🚀 GET POST COMMENTS
-const getInstitutionPostComments = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
-  const result = await getPostCommentsService(
-    postId,
-    page,
-    limit,
-    req.user._id
-  );
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "Comments fetched successfully"));
-});
-
-// 🚀 ADD COMMENT
-const createInstitutionPostComment = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { content } = req.body;
-  if (!content?.trim()) {
-    throw new ApiError(400, "Comment content is required");
-  }
-  const result = await addCommentService(postId, content, req.user._id);
-  return res
-    .status(201)
-    .json(new ApiResponse(201, result, "Comment added successfully"));
-});
-
-// 🚀 DELETE COMMENT
-const deleteInstitutionPostComment = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const result = await deleteCommentService(commentId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "Comment deleted successfully"));
-});
-
-// 🚀 UPDATE COMMENT
-const updateInstitutionPostComment = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const { content } = req.body;
-  if (!content?.trim()) {
-    throw new ApiError(400, "Content is required");
-  }
-  const result = await updateCommentService(commentId, content, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "Comment updated successfully"));
-});
-
-// 🚀 TOGGLE COMMENT LIKE
-const toggleInstitutionPostCommentLike = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const result = await toggleCommentLikeService(commentId, req.user._id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "Comment like toggled"));
-});
+// (Moved to dedicated controllers)
 
 export {
   getInstitutionFeed,
   createInstitutionPost,
   getInstitutionDetails,
   getDepartmentsList,
-  toggleInstitutionFollow,
-  toggleInstitutionPostLike,
-  toggleInstitutionPostRead,
-  deleteInstitutionPost,
-  updateInstitutionPost,
-  getInstitutionPostComments,
-  createInstitutionPostComment,
-  deleteInstitutionPostComment,
-  updateInstitutionPostComment,
-  toggleInstitutionPostCommentLike,
 };

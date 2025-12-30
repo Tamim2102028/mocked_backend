@@ -136,14 +136,17 @@ export const createPostService = async (postData, authorId) => {
 
 // === Toggle Like Service ===
 export const toggleLikePostService = async (postId, userId) => {
+  if (!postId) throw new ApiError(400, "Post ID is required to toggle like");
+
   // Check if post exists
   const post = await Post.findById(postId);
   if (!post) {
-    throw new ApiError(404, "Post not found");
+    throw new ApiError(404, `Post with ID ${postId} not found`);
   }
   if (post.isDeleted) {
-    throw new ApiError(404, "Post is deleted");
+    throw new ApiError(410, "Cannot like a deleted post");
   }
+
   // Check if already liked
   const existingReaction = await Reaction.findOne({
     targetId: postId,
@@ -155,20 +158,31 @@ export const toggleLikePostService = async (postId, userId) => {
 
   if (existingReaction) {
     // Unlike
-    await Reaction.findByIdAndDelete(existingReaction._id);
+    const deletedReaction = await Reaction.findByIdAndDelete(
+      existingReaction._id
+    );
+    if (!deletedReaction) {
+      throw new ApiError(500, "Failed to unlike the post. Please try again.");
+    }
     isLiked = false;
   } else {
     // Like
-    await Reaction.create({
+    const newReaction = await Reaction.create({
       targetId: postId,
       targetModel: REACTION_TARGET_MODELS.POST,
       user: userId,
     });
+    if (!newReaction) {
+      throw new ApiError(500, "Failed to like the post. Please try again.");
+    }
     isLiked = true;
   }
 
   // Get updated stats
   const updatedPost = await Post.findById(postId).select("likesCount");
+  if (!updatedPost) {
+    throw new ApiError(404, "Post was removed during the operation");
+  }
 
   return {
     postId,
@@ -179,6 +193,14 @@ export const toggleLikePostService = async (postId, userId) => {
 
 // === Toggle Mark as Read Service ===
 export const toggleMarkAsReadService = async (postId, userId) => {
+  if (!postId)
+    throw new ApiError(400, "Post ID is required to toggle read status");
+
+  const post = await Post.exists({ _id: postId, isDeleted: false });
+  if (!post) {
+    throw new ApiError(404, "Post not found or has been deleted");
+  }
+
   // Check if already read
   const existingRead = await ReadPost.findOne({
     post: postId,
@@ -187,17 +209,23 @@ export const toggleMarkAsReadService = async (postId, userId) => {
 
   if (existingRead) {
     // Mark as unread
-    await existingRead.deleteOne();
+    const deletedRead = await existingRead.deleteOne();
+    if (!deletedRead) {
+      throw new ApiError(500, "Failed to mark post as unread");
+    }
     return {
       targetId: postId,
       isRead: false,
     };
   } else {
     // Mark as read
-    await ReadPost.create({
+    const newRead = await ReadPost.create({
       post: postId,
       user: userId,
     });
+    if (!newRead) {
+      throw new ApiError(500, "Failed to mark post as read");
+    }
     return {
       targetId: postId,
       isRead: true,
@@ -210,10 +238,10 @@ export const deletePostService = async (postId, userId) => {
   const post = await Post.findById(postId);
 
   if (!post) {
-    throw new ApiError(404, "Post not found");
+    throw new ApiError(404, `Post not found with ID: ${postId}`);
   }
   if (post.isDeleted) {
-    throw new ApiError(404, "Post is already deleted");
+    throw new ApiError(410, "Post has already been deleted.");
   }
 
   // Check authorization
@@ -245,16 +273,30 @@ export const deletePostService = async (postId, userId) => {
     targetModel: REACTION_TARGET_MODELS.POST,
   });
 
-  // 4. If post was on a Group, decrement group's postsCount
-  if (post.postOnModel === POST_TARGET_MODELS.GROUP && post.postOnId) {
+  // 4. Update postsCount for the target model
+  if (post.postOnId) {
     try {
-      await Group.findByIdAndUpdate(post.postOnId, {
-        $inc: { postsCount: -1 },
-      });
+      if (post.postOnModel === POST_TARGET_MODELS.GROUP) {
+        await Group.findByIdAndUpdate(post.postOnId, {
+          $inc: { postsCount: -1 },
+        });
+      } else if (post.postOnModel === POST_TARGET_MODELS.USER) {
+        await User.findByIdAndUpdate(post.postOnId, {
+          $inc: { postsCount: -1 },
+        });
+      } else if (post.postOnModel === POST_TARGET_MODELS.DEPARTMENT) {
+        await Department.findByIdAndUpdate(post.postOnId, {
+          $inc: { postsCount: -1 },
+        });
+      } else if (post.postOnModel === POST_TARGET_MODELS.INSTITUTION) {
+        await Institution.findByIdAndUpdate(post.postOnId, {
+          $inc: { postsCount: -1 },
+        });
+      }
     } catch (error) {
       throw new ApiError(
         500,
-        `${error}` || "Failed to update group's posts count"
+        error?.message || "Failed to update postsCount for the target model"
       );
     }
   }
@@ -273,7 +315,7 @@ export const updatePostService = async (postId, userId, updateData) => {
   const post = await Post.findById(postId);
 
   if (!post) {
-    throw new ApiError(404, "Post not found");
+    throw new ApiError(404, `Post not found with ID: ${postId}`);
   }
 
   // Check authorization
@@ -282,7 +324,10 @@ export const updatePostService = async (postId, userId, updateData) => {
   }
 
   if (post.isDeleted) {
-    throw new ApiError(404, "Post not found");
+    throw new ApiError(
+      410,
+      "This post has been deleted and cannot be updated."
+    );
   }
 
   // Update fields
@@ -317,6 +362,10 @@ export const updatePostService = async (postId, userId, updateData) => {
     "fullName avatar userName"
   );
 
+  if (!updatedPostObj) {
+    throw new ApiError(404, "Post was lost during update operation");
+  }
+
   // Check like status
   const existingReaction = await Reaction.findOne({
     targetId: postId,
@@ -340,11 +389,11 @@ export const togglePinPostService = async (postId, userId) => {
   const post = await Post.findById(postId);
 
   if (!post) {
-    throw new ApiError(404, "Post not found");
+    throw new ApiError(404, `Post not found for pinning (ID: ${postId})`);
   }
 
   if (post.isDeleted) {
-    throw new ApiError(404, "Post not found");
+    throw new ApiError(410, "Cannot pin a deleted post.");
   }
 
   // Only group posts can be pinned in this implementation
@@ -352,23 +401,42 @@ export const togglePinPostService = async (postId, userId) => {
     throw new ApiError(400, "Pinning is only supported for group posts");
   }
 
-  // Check admin/owner membership on the group
-  const membership = await GroupMembership.findOne({
-    group: post.postOnId,
-    user: userId,
-    role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
-  });
-
-  if (!membership) {
-    throw new ApiError(
-      403,
-      "You are not authorized to pin/unpin posts in this group"
-    );
+  // Check authorization based on model
+  if (post.postOnModel === POST_TARGET_MODELS.GROUP) {
+    const membership = await GroupMembership.findOne({
+      group: post.postOnId,
+      user: userId,
+      role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
+    });
+    if (!membership) {
+      throw new ApiError(
+        403,
+        "You are not authorized to pin/unpin posts in this group"
+      );
+    }
+  } else if (post.postOnModel === POST_TARGET_MODELS.USER) {
+    // Only profile owner can pin their own posts
+    if (post.postOnId.toString() !== userId.toString()) {
+      throw new ApiError(403, "You can only pin posts on your own profile");
+    }
+  } else if (
+    [POST_TARGET_MODELS.DEPARTMENT, POST_TARGET_MODELS.INSTITUTION].includes(
+      post.postOnModel
+    )
+  ) {
+    // TODO: Add admin check for Dept/Institution if needed
+    // For now, allow pinning if it's the post author or we can add specific admin logic later
+    if (post.author.toString() !== userId.toString()) {
+      throw new ApiError(403, "Unauthorized to pin this post");
+    }
   }
 
   // Toggle pinned flag
   post.isPinned = !post.isPinned;
-  await post.save();
+  const savedPost = await post.save();
+  if (!savedPost) {
+    throw new ApiError(500, "Failed to save the pinned status");
+  }
 
   // Return updated post with author populated and minimal meta
   const updatedPostObj = await Post.findById(postId).populate(

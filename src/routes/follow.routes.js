@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { getCrFeed, createCrPost } from "../controllers/cr.controllers.js";
+import { toggleFollow } from "../controllers/follow.controllers.js";
 
 const router = Router();
+
 router.use(verifyJWT);
 
-router.get("/feed", getCrFeed);
-router.post("/post", createCrPost);
+// POST /api/v1/follows/:targetId/toggle
+router.post("/:targetId/toggle", toggleFollow);
 
 export default router;

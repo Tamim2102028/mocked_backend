@@ -20,7 +20,8 @@ import {
 const router = Router();
 router.use(verifyJWT);
 
-router.post("/:deptId/follow", toggleDeptFollow);
+// (Moved to unified follow router)
+
 router.get("/:deptId", getDeptDetails);
 router.get("/:deptId/feed", getDeptFeed);
 router.get("/:deptId/teachers", getTeachers);
@@ -29,15 +30,8 @@ router.post("/:deptId/post", createDeptPost);
 // ==========================================
 // 🚀 POST & COMMENT ACTIONS
 // ==========================================
-router.post("/posts/:postId/like", toggleDeptPostLike);
-router.post("/posts/:postId/read", toggleDeptPostRead);
-router.delete("/posts/:postId", deleteDeptPost);
-router.patch("/posts/:postId", updateDeptPost);
+// (Moved to unified post router)
 
-router.get("/posts/:postId/comments", getDeptPostComments);
-router.post("/posts/:postId/comments", createDeptPostComment);
-router.delete("/comments/:commentId", deleteDeptPostComment);
-router.patch("/comments/:commentId", updateDeptPostComment);
-router.post("/comments/:commentId/like", toggleDeptPostCommentLike);
+// (Moved to unified comment router)
 
 export default router;

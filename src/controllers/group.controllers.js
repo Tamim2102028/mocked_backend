@@ -17,6 +17,7 @@ import {
   updateCommentService,
   toggleCommentLikeService,
 } from "../services/comment.service.js";
+
 import { Group } from "../models/group.model.js";
 
 // ==========================================
@@ -592,119 +593,7 @@ const updateGroupPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { post, meta }, "Post updated successfully"));
 });
 
-// ==========================================
-// 🚀 24. GET POST COMMENTS
-// ==========================================
-const getGroupPostComments = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
-
-  const { comments, pagination } = await getPostCommentsService(
-    postId,
-    page,
-    limit,
-    req.user._id
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { comments, pagination },
-        "Comments fetched successfully"
-      )
-    );
-});
-
-// ==========================================
-// 🚀 25. ADD COMMENT
-// ==========================================
-const createGroupPostComment = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-  const { content } = req.body;
-
-  if (!content?.trim()) {
-    throw new ApiError(400, "Comment content is required");
-  }
-
-  const { comment, meta } = await addCommentService(
-    postId,
-    content,
-    req.user._id
-  );
-
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(201, { comment, meta }, "Comment added successfully")
-    );
-});
-
-// ==========================================
-// 🚀 26. DELETE COMMENT
-// ==========================================
-const deleteGroupPostComment = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-
-  const { commentId: deletedCommentId } = await deleteCommentService(
-    commentId,
-    req.user._id
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { commentId: deletedCommentId },
-        "Comment deleted successfully"
-      )
-    );
-});
-
-// ==========================================
-// 🚀 27. UPDATE COMMENT
-// ==========================================
-const updateGroupPostComment = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-  const { content } = req.body;
-
-  if (!content?.trim()) {
-    throw new ApiError(400, "Content is required");
-  }
-
-  const { comment, meta } = await updateCommentService(
-    commentId,
-    content,
-    req.user._id
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, { comment, meta }, "Comment updated successfully")
-    );
-});
-
-// ==========================================
-// 🚀 28. TOGGLE COMMENT LIKE
-// ==========================================
-const toggleGroupPostCommentLike = asyncHandler(async (req, res) => {
-  const { commentId } = req.params;
-
-  const { isLiked } = await toggleCommentLikeService(commentId, req.user._id);
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { isLiked },
-        isLiked ? "Comment liked" : "Comment unliked"
-      )
-    );
-});
+// (Moved to dedicated controllers)
 
 export {
   createGroup,
@@ -732,11 +621,6 @@ export {
   deleteGroupPost,
   updateGroupPost,
   getGroupPinnedPosts,
-  getGroupPostComments,
-  createGroupPostComment,
-  deleteGroupPostComment,
-  updateGroupPostComment,
-  toggleGroupPostCommentLike,
   deleteGroup,
   inviteMembers,
 };

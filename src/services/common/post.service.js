@@ -1,4 +1,5 @@
 import { Post } from "../../models/post.model.js";
+import { Comment } from "../../models/comment.model.js";
 import { Reaction } from "../../models/reaction.model.js";
 import { ReadPost } from "../../models/readPost.model.js";
 import { Group } from "../../models/group.model.js";

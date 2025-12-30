@@ -2,7 +2,6 @@ import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   getGroupFeed,
-  createGroupPost,
   createGroup,
   deleteGroup,
   inviteMembers,
@@ -59,7 +58,6 @@ router.get("/:slug/feed", getGroupFeed);
 router.get("/:slug/pinned", getGroupPinnedPosts);
 
 // Group Details page Action Routes
-router.post("/:slug/post", createGroupPost);
 router.delete("/:slug/leave", leaveGroup);
 router.delete("/:slug", deleteGroup);
 router.post("/:slug/invite", inviteMembers);
@@ -68,12 +66,5 @@ router.post("/:slug/invite", inviteMembers);
 router.delete("/:slug/members/:userId", removeMember);
 router.patch("/:slug/members/:userId/assign-admin", assignAdmin);
 router.patch("/:slug/members/:userId/revoke-admin", revokeAdmin);
-
-// ==========================================
-// 🚀 POST & COMMENT ACTIONS
-// ==========================================
-// (Moved to unified post router)
-
-// (Moved to dedicated comment namespace)
 
 export default router;

@@ -11,11 +11,6 @@ import { userOnboardingSchema } from "../validators/auth.validator.js";
 // Controllers
 import {
   getUserProfilePosts,
-  createProfilePost,
-  toggleProfilePostLike,
-  toggleProfilePostRead,
-  deleteProfilePost,
-  updateProfilePost,
   getUserProfileHeader,
   getUserDetails,
   updateAccountDetails,
@@ -34,8 +29,6 @@ router.get("/:username", getUserProfileHeader);
 
 // GET /profile/details/:username
 router.get("/details/:username", getUserDetails);
-
-// Follow / Unfollow (Moved to /follows)
 
 // update general details
 router.patch("/update-general", updateAccountDetails);
@@ -59,18 +52,5 @@ router.patch(
 
 // get profile posts
 router.get("/:username/posts", getUserProfilePosts);
-
-// create profile post
-router.post("/post", createProfilePost);
-
-// ================================
-// Post actions
-// ================================
-// (Moved to unitifed post router)
-
-// ================================
-// Post Comments
-// ================================
-// Post Comments (Moved to /comments)
 
 export default router;

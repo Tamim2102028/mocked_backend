@@ -3,14 +3,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { groupServices, groupActions } from "../services/group.service.js";
 import { GROUP_MEMBERSHIP_STATUS } from "../constants/index.js";
-import {
-  toggleLikePostService,
-  toggleMarkAsReadService,
-  deletePostService,
-  updatePostService,
-  togglePinPostService,
-} from "../services/common/post.service.js";
-
 import { Group } from "../models/group.model.js";
 
 // ==========================================
@@ -476,102 +468,6 @@ const getGroupPinnedPosts = asyncHandler(async (req, res) => {
     );
 });
 
-// post related
-const createGroupPost = asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-  const postData = req.body;
-
-  const group = await Group.findOne({ slug });
-  if (!group) throw new ApiError(404, "Group not found");
-
-  const { post, meta } = await groupActions.createGroupPostService(
-    group._id,
-    req.user._id,
-    postData
-  );
-
-  return res
-    .status(201)
-    .json(new ApiResponse(201, { post, meta }, "Group post created"));
-});
-
-const toggleGroupPostLike = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-
-  const { isLiked } = await toggleLikePostService(postId, req.user._id);
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, { isLiked }, isLiked ? "Post liked" : "Post unliked")
-    );
-});
-
-const toggleGroupPostRead = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-
-  const { isRead } = await toggleMarkAsReadService(postId, req.user._id);
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { isRead },
-        isRead ? "Marked as read" : "Marked as unread"
-      )
-    );
-});
-
-const toggleGroupPostPin = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-
-  const { post, meta } = await togglePinPostService(postId, req.user._id);
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { post, meta },
-        post.isPinned ? "Post pinned" : "Post unpinned"
-      )
-    );
-});
-
-const deleteGroupPost = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-
-  const { postId: deletedPostId } = await deletePostService(
-    postId,
-    req.user._id
-  );
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { postId: deletedPostId },
-        "Post deleted successfully"
-      )
-    );
-});
-
-const updateGroupPost = asyncHandler(async (req, res) => {
-  const { postId } = req.params;
-
-  const { post, meta } = await updatePostService(
-    postId,
-    req.user._id,
-    req.body
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { post, meta }, "Post updated successfully"));
-});
-
 // (Moved to dedicated controllers)
 
 export {
@@ -593,12 +489,6 @@ export {
   assignAdmin,
   revokeAdmin,
   getGroupFeed,
-  createGroupPost,
-  toggleGroupPostLike,
-  toggleGroupPostRead,
-  toggleGroupPostPin,
-  deleteGroupPost,
-  updateGroupPost,
   getGroupPinnedPosts,
   deleteGroup,
   inviteMembers,

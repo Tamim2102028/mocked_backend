@@ -1,12 +1,12 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ApiResponse } from "../../utils/ApiResponse.js";
 import {
   registerUserService,
   loginUserService,
   logoutUserService,
   refreshAccessTokenService,
   changePasswordService,
-} from "../services/auth.service.js";
+} from "../../services/auth.service.js";
 
 // -----------------------------
 // Auth & Session

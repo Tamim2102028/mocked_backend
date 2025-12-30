@@ -1,13 +1,13 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ApiResponse } from "../../utils/ApiResponse.js";
+import { ApiError } from "../../utils/ApiError.js";
 import {
   getPostCommentsService,
   addCommentService,
   deleteCommentService,
   updateCommentService,
   toggleCommentLikeService,
-} from "../services/common/comment.service.js";
+} from "../../services/common/comment.service.js";
 
 // Get comments for a post
 const getPostComments = asyncHandler(async (req, res) => {

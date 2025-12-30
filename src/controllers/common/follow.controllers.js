@@ -1,7 +1,7 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { ApiError } from "../utils/ApiError.js";
-import { toggleFollowService } from "../services/common/follow.service.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ApiResponse } from "../../utils/ApiResponse.js";
+import { ApiError } from "../../utils/ApiError.js";
+import { toggleFollowService } from "../../services/common/follow.service.js";
 
 const toggleFollow = asyncHandler(async (req, res) => {
   const { targetId } = req.params;

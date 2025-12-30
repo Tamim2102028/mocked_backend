@@ -1,12 +1,12 @@
 import { Router } from "express";
 
 // Middlewares
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { uploadImage } from "../middlewares/multer.middleware.js";
-import { validate } from "../middlewares/validate.middleware.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
+import { uploadImage } from "../../middlewares/multer.middleware.js";
+import { validate } from "../../middlewares/validate.middleware.js";
 
 // Validators
-import { userOnboardingSchema } from "../validators/auth.validator.js";
+import { userOnboardingSchema } from "../../validators/auth.validator.js";
 
 // Controllers
 import {
@@ -28,7 +28,7 @@ import {
   updateAcademicProfile,
   updateUserAvatar,
   updateUserCoverImage,
-} from "../controllers/profile.controllers.js";
+} from "../../controllers/profile.controllers.js";
 
 const router = Router();
 

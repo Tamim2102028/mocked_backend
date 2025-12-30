@@ -8,15 +8,15 @@ import {
   refreshAccessToken,
   changeCurrentPassword,
   getCurrentUser,
-} from "../controllers/auth.controllers.js";
+} from "../../controllers/auth.controllers.js";
 
 // Middlewares
-import { uploadImage } from "../middlewares/multer.middleware.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { validate } from "../middlewares/validate.middleware.js";
+import { uploadImage } from "../../middlewares/multer.middleware.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
+import { validate } from "../../middlewares/validate.middleware.js";
 
 // Validators
-import { userRegisterSchema } from "../validators/auth.validator.js";
+import { userRegisterSchema } from "../../validators/auth.validator.js";
 
 const router = Router();
 

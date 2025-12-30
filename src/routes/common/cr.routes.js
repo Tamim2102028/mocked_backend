@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { getCrFeed, createCrPost } from "../controllers/cr.controllers.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
+import { getCrFeed, createCrPost } from "../../controllers/cr.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);

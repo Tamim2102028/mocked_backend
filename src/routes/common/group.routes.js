@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import {
   getGroupFeed,
   createGroupPost,
@@ -33,8 +33,8 @@ import {
   deleteGroupPostComment,
   updateGroupPostComment,
   toggleGroupPostCommentLike,
-} from "../controllers/group.controllers.js";
-import { uploadImage } from "../middlewares/multer.middleware.js";
+} from "../../controllers/group.controllers.js";
+import { uploadImage } from "../../middlewares/multer.middleware.js";
 
 const router = Router();
 router.use(verifyJWT);

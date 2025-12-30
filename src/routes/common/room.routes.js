@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import {
   getRoomFeed,
   createRoomPost,
   getMyRooms,
   createRoom,
   getRoomDetails,
-} from "../controllers/room.controllers.js";
+} from "../../controllers/room.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);

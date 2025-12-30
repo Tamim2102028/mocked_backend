@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT } from "../../middlewares/auth.middleware.js";
 import {
   getDeptFeed,
   createDeptPost,
@@ -15,7 +15,7 @@ import {
   updateDeptPostComment,
   toggleDeptPostCommentLike,
   toggleDeptFollow,
-} from "../controllers/dept.controllers.js";
+} from "../../controllers/dept.controllers.js";
 
 const router = Router();
 router.use(verifyJWT);

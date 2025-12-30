@@ -79,6 +79,15 @@ export const toggleFollowService = async (
   if (existingFollow) {
     // UNFOLLOW
     await Follow.findByIdAndDelete(existingFollow._id);
+
+    // ✅ Update counts only if target is a User
+    if (targetModel === FOLLOW_TARGET_MODELS.USER) {
+      await User.findByIdAndUpdate(currentUserId, {
+        $inc: { followingCount: -1 },
+      });
+      await User.findByIdAndUpdate(targetId, { $inc: { followersCount: -1 } });
+    }
+
     return { isFollowing: false };
   } else {
     // FOLLOW
@@ -87,6 +96,15 @@ export const toggleFollowService = async (
       following: targetId,
       followingModel: targetModel,
     });
+
+    // ✅ Update counts only if target is a User
+    if (targetModel === FOLLOW_TARGET_MODELS.USER) {
+      await User.findByIdAndUpdate(currentUserId, {
+        $inc: { followingCount: 1 },
+      });
+      await User.findByIdAndUpdate(targetId, { $inc: { followersCount: 1 } });
+    }
+
     return { isFollowing: true };
   }
 };

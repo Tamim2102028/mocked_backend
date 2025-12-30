@@ -69,6 +69,8 @@ const userSchema = new Schema(
     connectionsCount: { type: Number, default: 0 }, // Friends Count
     followersCount: { type: Number, default: 0 }, // Followers Count
     followingCount: { type: Number, default: 0 }, // Following Count
+    postsCount: { type: Number, default: 0 }, // Posts Count
+    publicFilesCount: { type: Number, default: 0 }, // Public Files Count
 
     // --- Institutional Data ---
     userType: {

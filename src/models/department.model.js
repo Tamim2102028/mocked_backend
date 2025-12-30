@@ -34,6 +34,7 @@ const departmentSchema = new Schema(
       default: DEPT_STATUS.ACTIVE,
       index: true,
     },
+    postsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

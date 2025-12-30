@@ -400,6 +400,12 @@ const acceptFriendRequest = asyncHandler(async (req, res) => {
   friendship.status = FRIENDSHIP_STATUS.ACCEPTED;
   await friendship.save();
 
+  // ✅ Update connectionsCount for both users
+  await User.updateMany(
+    { _id: { $in: [requesterId, currentUserId] } },
+    { $inc: { connectionsCount: 1 } }
+  );
+
   return res.status(200).json(
     new ApiResponse(
       200,
@@ -470,6 +476,12 @@ const unfriendUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Friendship not found");
   }
 
+  // ✅ Update connectionsCount for both users
+  await User.updateMany(
+    { _id: { $in: [targetUserId, currentUserId] } },
+    { $inc: { connectionsCount: -1 } }
+  );
+
   return res
     .status(200)
     .json(
@@ -514,13 +526,21 @@ const blockUser = asyncHandler(async (req, res) => {
   }
 
   // 2. Remove any existing friendship/request (Accepted or Pending)
-  await Friendship.findOneAndDelete({
+  const oldFriendship = await Friendship.findOneAndDelete({
     $or: [
       { requester: currentUserId, recipient: targetUserId },
       { requester: targetUserId, recipient: currentUserId },
     ],
     status: { $ne: FRIENDSHIP_STATUS.BLOCKED },
   });
+
+  if (oldFriendship && oldFriendship.status === FRIENDSHIP_STATUS.ACCEPTED) {
+    // ✅ Update connectionsCount for both users if they were friends
+    await User.updateMany(
+      { _id: { $in: [targetUserId, currentUserId] } },
+      { $inc: { connectionsCount: -1 } }
+    );
+  }
 
   // 3. Remove any existing follows (both ways)
   await Follow.deleteMany({

@@ -55,6 +55,7 @@ const institutionSchema = new Schema(
     contactPhones: [{ type: String, trim: true }],
 
     isActive: { type: Boolean, default: true },
+    postsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

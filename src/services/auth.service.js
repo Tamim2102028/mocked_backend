@@ -392,45 +392,6 @@ export const getUserProfileHeaderService = async (
     if (follow) isFollowing = true;
   }
 
-  // 3. Calculate Posts Count (Dynamic)
-  let visibilityQuery = {
-    postOnId: user._id,
-    postOnModel: POST_TARGET_MODELS.USER,
-    isDeleted: false,
-    isArchived: false,
-  };
-
-  let postsCount = 0;
-
-  if (isSelf) {
-    // Own Profile: See everything
-    postsCount = await Post.countDocuments(visibilityQuery);
-  } else if (!isBlockedByMe && !isBlockedByTarget) {
-    // Visitor: Check Relationship (Only if NOT blocked)
-    const isFriend = relationStatus === PROFILE_RELATION_STATUS.FRIEND;
-    if (isFriend) {
-      visibilityQuery.visibility = {
-        $in: [POST_VISIBILITY.PUBLIC, POST_VISIBILITY.CONNECTIONS],
-      };
-    } else {
-      visibilityQuery.visibility = POST_VISIBILITY.PUBLIC;
-    }
-    postsCount = await Post.countDocuments(visibilityQuery);
-  }
-
-  // Recalculate counts to ensure accuracy
-  const realFollowersCount = await Follow.countDocuments({
-    following: user._id,
-    followingModel: FOLLOW_TARGET_MODELS.USER,
-  });
-  const realFollowingCount = await Follow.countDocuments({
-    follower: user._id,
-  });
-  const realConnectionsCount = await Friendship.countDocuments({
-    $or: [{ requester: user._id }, { recipient: user._id }],
-    status: FRIENDSHIP_STATUS.ACCEPTED,
-  });
-
   return {
     user,
     meta: {
@@ -440,11 +401,11 @@ export const getUserProfileHeaderService = async (
       isBlockedByTarget,
       isOwnProfile: isSelf,
       stats: {
-        postsCount: postsCount,
-        friendsCount: realConnectionsCount,
-        followersCount: realFollowersCount,
-        followingCount: realFollowingCount,
-        publicFilesCount: 7, // TODO: Implement Files
+        postsCount: user.postsCount || 0,
+        friendsCount: user.connectionsCount || 0,
+        followersCount: user.followersCount || 0,
+        followingCount: user.followingCount || 0,
+        publicFilesCount: user.publicFilesCount || 0,
       },
     },
   };

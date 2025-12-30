@@ -38,6 +38,9 @@ import roomRouter from "./routes/room.routes.js";
 import institutionRouter from "./routes/institution.routes.js";
 import friendshipRouter from "./routes/friendship.routes.js";
 import profileRouter from "./routes/profile.routes.js";
+import postRouter from "./routes/post.routes.js";
+
+app.use("/api/v1/posts", postRouter);
 
 app.use("/api/v1/profile", profileRouter);
 app.use("/api/v1/cr-corner", crRouter);

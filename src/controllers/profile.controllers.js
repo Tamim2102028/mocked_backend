@@ -16,17 +16,7 @@ import {
   toggleMarkAsReadService,
   deletePostService,
   updatePostService,
-} from "../services/post.service.js";
-import {
-  getPostCommentsService,
-  addCommentService,
-  deleteCommentService,
-  updateCommentService,
-  toggleCommentLikeService,
-} from "../services/comment.service.js";
-
-import { toggleFollowService } from "../services/follow.service.js";
-import { FOLLOW_TARGET_MODELS } from "../constants/index.js";
+} from "../services/common/post.service.js";
 
 // -----------------------------
 // Profile Posts

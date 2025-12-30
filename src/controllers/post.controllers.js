@@ -8,7 +8,7 @@ import {
   deletePostService,
   updatePostService,
   togglePinPostService,
-} from "../services/post.service.js";
+} from "../services/common/post.service.js";
 import { Group } from "../models/group.model.js";
 import { GroupMembership } from "../models/groupMembership.model.js";
 import { User } from "../models/user.model.js";

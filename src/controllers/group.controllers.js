@@ -9,14 +9,7 @@ import {
   deletePostService,
   updatePostService,
   togglePinPostService,
-} from "../services/post.service.js";
-import {
-  getPostCommentsService,
-  addCommentService,
-  deleteCommentService,
-  updateCommentService,
-  toggleCommentLikeService,
-} from "../services/comment.service.js";
+} from "../services/common/post.service.js";
 
 import { Group } from "../models/group.model.js";
 

@@ -15,7 +15,7 @@ import { Post } from "../models/post.model.js";
 import { ReadPost } from "../models/readPost.model.js";
 import { Reaction } from "../models/reaction.model.js";
 import { Comment } from "../models/comment.model.js";
-import { createPostService } from "./post.service.js";
+import { createPostService } from "./common/post.service.js";
 
 const groupActions = {
   createGroupService: async (

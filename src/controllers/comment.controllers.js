@@ -7,7 +7,7 @@ import {
   deleteCommentService,
   updateCommentService,
   toggleCommentLikeService,
-} from "../services/comment.service.js";
+} from "../services/common/comment.service.js";
 
 // Get comments for a post
 const getPostComments = asyncHandler(async (req, res) => {

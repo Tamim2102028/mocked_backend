@@ -55,6 +55,4 @@ const createCrPost = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { post, meta }, "Notice posted in CR Corner"));
 });
 
-// (Moved to dedicated controllers)
-
 export { getCrFeed, createCrPost };

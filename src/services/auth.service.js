@@ -431,13 +431,6 @@ export const getUserProfileHeaderService = async (
       isBlockedByMe,
       isBlockedByTarget,
       isOwnProfile: isSelf,
-      stats: {
-        postsCount: user.postsCount || 0,
-        friendsCount: user.connectionsCount || 0,
-        followersCount: user.followersCount || 0,
-        followingCount: user.followingCount || 0,
-        publicFilesCount: user.publicFilesCount || 0,
-      },
     },
   };
 };

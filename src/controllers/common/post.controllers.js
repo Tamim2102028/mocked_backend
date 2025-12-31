@@ -25,6 +25,18 @@ const createPost = asyncHandler(async (req, res) => {
   const { postOnModel, postOnId } = req.body;
   const userId = req.user._id;
 
+  // Check if user is post blocked
+  const currentUser = await User.findById(userId).select("restrictions");
+  if (currentUser?.restrictions?.isPostBlocked) {
+    throw new ApiError(403, "You are restricted from posting", [
+      {
+        restrictionType: "post",
+        reason: currentUser.restrictions.postRestriction?.reason,
+        restrictedAt: currentUser.restrictions.postRestriction?.restrictedAt,
+      },
+    ]);
+  }
+
   if (!postOnModel || !postOnId) {
     throw new ApiError(400, "postOnModel and postOnId are required");
   }

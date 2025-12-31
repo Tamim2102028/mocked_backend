@@ -1,6 +1,7 @@
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { User } from "../../models/user.model.js";
 import {
   getPostCommentsService,
   addCommentService,
@@ -30,6 +31,18 @@ const getPostComments = asyncHandler(async (req, res) => {
 const createComment = asyncHandler(async (req, res) => {
   const { postId } = req.params;
   const { content } = req.body;
+
+  // Check if user is comment blocked
+  const user = await User.findById(req.user._id).select("restrictions");
+  if (user?.restrictions?.isCommentBlocked) {
+    throw new ApiError(403, "You are restricted from commenting", [
+      {
+        restrictionType: "comment",
+        reason: user.restrictions.commentRestriction?.reason,
+        restrictedAt: user.restrictions.commentRestriction?.restrictedAt,
+      },
+    ]);
+  }
 
   if (!content?.trim()) {
     throw new ApiError(400, "Comment content is required");

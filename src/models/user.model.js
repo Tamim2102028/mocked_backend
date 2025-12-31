@@ -119,6 +119,29 @@ const userSchema = new Schema(
         default: CONNECTION_VISIBILITY.ONLY_ME, // সব সময় ONLY_ME থাকবে, কেউ অন্যের ফ্রেন্ডলিস্ট দেখবে না
       },
     },
+
+    // --- Activity Restrictions ---
+    restrictions: {
+      isCommentBlocked: { type: Boolean, default: false },
+      isPostBlocked: { type: Boolean, default: false },
+      isMessageBlocked: { type: Boolean, default: false },
+      commentRestriction: {
+        reason: { type: String, trim: true },
+        restrictedAt: { type: Date },
+        restrictedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      },
+      postRestriction: {
+        reason: { type: String, trim: true },
+        restrictedAt: { type: Date },
+        restrictedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      },
+      messageRestriction: {
+        reason: { type: String, trim: true },
+        restrictedAt: { type: Date },
+        restrictedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      },
+    },
+
     isStudentEmail: {
       type: Boolean,
       default: false,

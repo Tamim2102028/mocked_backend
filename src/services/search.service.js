@@ -33,14 +33,15 @@ class SearchService {
     const counts = {};
 
     try {
-      // Parallel search across all categories for better performance
       const searchPromises = [];
+      const isAll = type === "all";
+      const resultsLimit = isAll ? 5 : limit; // Optimized limit for 'all' results
 
-      if (type === "all" || type === "users") {
+      if (isAll || type === "users") {
         searchPromises.push(
           this.searchUsersByQuery(searchQuery, filters.currentUserId, {
-            page,
-            limit: Math.min(limit, 20),
+            page: isAll ? 1 : page,
+            limit: Math.min(resultsLimit, 20),
           }).then((data) => {
             results.users = data.users;
             counts.users = data.totalCount;
@@ -48,11 +49,11 @@ class SearchService {
         );
       }
 
-      if (type === "all" || type === "posts") {
+      if (isAll || type === "posts") {
         searchPromises.push(
           this.searchPostsByQuery(searchQuery, filters.currentUserId, {
-            page,
-            limit: Math.min(limit, 15),
+            page: isAll ? 1 : page,
+            limit: Math.min(resultsLimit, 15),
           }).then((data) => {
             results.posts = data.posts;
             counts.posts = data.totalCount;
@@ -60,11 +61,11 @@ class SearchService {
         );
       }
 
-      if (type === "all" || type === "groups") {
+      if (isAll || type === "groups") {
         searchPromises.push(
           this.searchGroupsByQuery(searchQuery, filters.currentUserId, {
-            page,
-            limit: Math.min(limit, 20),
+            page: isAll ? 1 : page,
+            limit: Math.min(resultsLimit, 20),
           }).then((data) => {
             results.groups = data.groups;
             counts.groups = data.totalCount;
@@ -72,11 +73,11 @@ class SearchService {
         );
       }
 
-      if (type === "all" || type === "institutions") {
+      if (isAll || type === "institutions") {
         searchPromises.push(
           this.searchInstitutionsByQuery(searchQuery, {
-            page,
-            limit: Math.min(limit, 15),
+            page: isAll ? 1 : page,
+            limit: Math.min(resultsLimit, 15),
           }).then((data) => {
             results.institutions = data.institutions;
             counts.institutions = data.totalCount;
@@ -84,11 +85,11 @@ class SearchService {
         );
       }
 
-      if (type === "all" || type === "departments") {
+      if (isAll || type === "departments") {
         searchPromises.push(
           this.searchDepartmentsByQuery(searchQuery, {
-            page,
-            limit: Math.min(limit, 20),
+            page: isAll ? 1 : page,
+            limit: Math.min(resultsLimit, 20),
           }).then((data) => {
             results.departments = data.departments;
             counts.departments = data.totalCount;
@@ -96,11 +97,11 @@ class SearchService {
         );
       }
 
-      if (type === "all" || type === "comments") {
+      if (isAll || type === "comments") {
         searchPromises.push(
           this.searchCommentsByQuery(searchQuery, filters.currentUserId, {
-            page,
-            limit: Math.min(limit, 10),
+            page: isAll ? 1 : page,
+            limit: Math.min(resultsLimit, 10),
           }).then((data) => {
             results.comments = data.comments;
             counts.comments = data.totalCount;
@@ -108,9 +109,7 @@ class SearchService {
         );
       }
 
-      if (type === "all" || type === "hashtags") {
-        // Simple extraction from posts or a dedicated aggregation if exists
-        // For now, we return empty or extract from matched posts
+      if (isAll || type === "hashtags") {
         results.hashtags = [];
         counts.hashtags = 0;
       }
@@ -124,19 +123,11 @@ class SearchService {
       );
 
       // Determine if there are more results
-      const hasMore =
-        type === "all"
-          ? Object.values(results).some(
-              (arr) =>
-                arr &&
-                arr.length >=
-                  (type === "posts" || type === "institutions"
-                    ? 15
-                    : type === "comments"
-                      ? 10
-                      : 20)
-            )
-          : results[type] && results[type].length >= limit;
+      const hasMore = isAll
+        ? Object.values(results).some(
+            (arr) => arr && arr.length >= resultsLimit
+          )
+        : results[type] && results[type].length >= limit;
 
       return {
         results,
@@ -144,8 +135,9 @@ class SearchService {
         pagination: {
           currentPage: page,
           hasMore,
-          totalPages:
-            type !== "all" ? Math.ceil(counts[type] / limit) : undefined,
+          totalPages: isAll
+            ? undefined
+            : Math.ceil((counts[type] || 0) / limit),
         },
         query: searchQuery,
         searchTime: Date.now(),

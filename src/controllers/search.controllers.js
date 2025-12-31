@@ -2,14 +2,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import SearchService from "../services/search.service.js";
+import { validatePaginationParams } from "../utils/pagination.js";
 
 /**
  * ====================================
  * SEARCH CONTROLLERS
  * ====================================
  *
- * Handles all search-related HTTP requests and responses.
- * Validates input, calls search service, and formats responses.
+ * Handles all search-related HTTP requests with proper validation
+ * and error handling.
  */
 
 /**
@@ -27,11 +28,7 @@ const globalSearch = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
 
   // Input validation
-  if (!query || typeof query !== "string") {
-    throw new ApiError(400, "Search query is required");
-  }
-
-  if (query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
@@ -51,23 +48,19 @@ const globalSearch = asyncHandler(async (req, res) => {
     );
   }
 
-  const pageNum = parseInt(page);
-  const limitNum = parseInt(limit);
-
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
-    throw new ApiError(400, "Limit must be between 1 and 100");
-  }
+  // Enhanced pagination validation
+  const { page: pageNum, limit: limitNum } = validatePaginationParams(
+    page,
+    limit,
+    50
+  );
 
   try {
     const startTime = Date.now();
 
     const searchResults = await SearchService.performGlobalSearch(
       query,
-      { type, sortBy, currentUserId },
+      { type, currentUserId, sortBy },
       { page: pageNum, limit: limitNum }
     );
 
@@ -84,9 +77,6 @@ const globalSearch = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `Search failed: ${error.message}`);
   }
 });
@@ -99,20 +89,15 @@ const searchUsers = asyncHandler(async (req, res) => {
   const { q: query, page = 1, limit = 20 } = req.query;
   const currentUserId = req.user._id;
 
-  // Input validation
-  if (!query || typeof query !== "string" || query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
-    throw new ApiError(400, "Limit must be between 1 and 50");
+  if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
+    throw new ApiError(400, "Invalid pagination parameters");
   }
 
   try {
@@ -130,22 +115,14 @@ const searchUsers = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          users: result.users,
-          pagination: {
-            currentPage: pageNum,
-            hasMore: result.hasMore,
-            totalCount: result.totalCount,
-          },
-          query,
+          ...result,
           searchTime,
+          query: query.trim(),
         },
         `Found ${result.users.length} users`
       )
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `User search failed: ${error.message}`);
   }
 });
@@ -158,20 +135,15 @@ const searchPosts = asyncHandler(async (req, res) => {
   const { q: query, page = 1, limit = 15 } = req.query;
   const currentUserId = req.user._id;
 
-  // Input validation
-  if (!query || typeof query !== "string" || query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 30) {
-    throw new ApiError(400, "Limit must be between 1 and 30");
+  if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
+    throw new ApiError(400, "Invalid pagination parameters");
   }
 
   try {
@@ -189,22 +161,14 @@ const searchPosts = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          posts: result.posts,
-          pagination: {
-            currentPage: pageNum,
-            hasMore: result.hasMore,
-            totalCount: result.totalCount,
-          },
-          query,
+          ...result,
           searchTime,
+          query: query.trim(),
         },
         `Found ${result.posts.length} posts`
       )
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `Post search failed: ${error.message}`);
   }
 });
@@ -217,20 +181,15 @@ const searchGroups = asyncHandler(async (req, res) => {
   const { q: query, page = 1, limit = 20 } = req.query;
   const currentUserId = req.user._id;
 
-  // Input validation
-  if (!query || typeof query !== "string" || query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
-    throw new ApiError(400, "Limit must be between 1 and 50");
+  if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
+    throw new ApiError(400, "Invalid pagination parameters");
   }
 
   try {
@@ -248,22 +207,14 @@ const searchGroups = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          groups: result.groups,
-          pagination: {
-            currentPage: pageNum,
-            hasMore: result.hasMore,
-            totalCount: result.totalCount,
-          },
-          query,
+          ...result,
           searchTime,
+          query: query.trim(),
         },
         `Found ${result.groups.length} groups`
       )
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `Group search failed: ${error.message}`);
   }
 });
@@ -275,20 +226,15 @@ const searchGroups = asyncHandler(async (req, res) => {
 const searchInstitutions = asyncHandler(async (req, res) => {
   const { q: query, page = 1, limit = 15 } = req.query;
 
-  // Input validation
-  if (!query || typeof query !== "string" || query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 30) {
-    throw new ApiError(400, "Limit must be between 1 and 30");
+  if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
+    throw new ApiError(400, "Invalid pagination parameters");
   }
 
   try {
@@ -305,22 +251,14 @@ const searchInstitutions = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          institutions: result.institutions,
-          pagination: {
-            currentPage: pageNum,
-            hasMore: result.hasMore,
-            totalCount: result.totalCount,
-          },
-          query,
+          ...result,
           searchTime,
+          query: query.trim(),
         },
         `Found ${result.institutions.length} institutions`
       )
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `Institution search failed: ${error.message}`);
   }
 });
@@ -332,20 +270,15 @@ const searchInstitutions = asyncHandler(async (req, res) => {
 const searchDepartments = asyncHandler(async (req, res) => {
   const { q: query, page = 1, limit = 20 } = req.query;
 
-  // Input validation
-  if (!query || typeof query !== "string" || query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 50) {
-    throw new ApiError(400, "Limit must be between 1 and 50");
+  if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
+    throw new ApiError(400, "Invalid pagination parameters");
   }
 
   try {
@@ -362,22 +295,14 @@ const searchDepartments = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          departments: result.departments,
-          pagination: {
-            currentPage: pageNum,
-            hasMore: result.hasMore,
-            totalCount: result.totalCount,
-          },
-          query,
+          ...result,
           searchTime,
+          query: query.trim(),
         },
         `Found ${result.departments.length} departments`
       )
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `Department search failed: ${error.message}`);
   }
 });
@@ -390,20 +315,15 @@ const searchComments = asyncHandler(async (req, res) => {
   const { q: query, page = 1, limit = 10 } = req.query;
   const currentUserId = req.user._id;
 
-  // Input validation
-  if (!query || typeof query !== "string" || query.trim().length < 2) {
+  if (!query || query.trim().length < 2) {
     throw new ApiError(400, "Search query must be at least 2 characters long");
   }
 
   const pageNum = parseInt(page);
   const limitNum = parseInt(limit);
 
-  if (isNaN(pageNum) || pageNum < 1) {
-    throw new ApiError(400, "Page must be a positive integer");
-  }
-
-  if (isNaN(limitNum) || limitNum < 1 || limitNum > 20) {
-    throw new ApiError(400, "Limit must be between 1 and 20");
+  if (pageNum < 1 || limitNum < 1 || limitNum > 50) {
+    throw new ApiError(400, "Invalid pagination parameters");
   }
 
   try {
@@ -421,50 +341,33 @@ const searchComments = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          comments: result.comments,
-          pagination: {
-            currentPage: pageNum,
-            hasMore: result.hasMore,
-            totalCount: result.totalCount,
-          },
-          query,
+          ...result,
           searchTime,
+          query: query.trim(),
         },
         `Found ${result.comments.length} comments`
       )
     );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
     throw new ApiError(500, `Comment search failed: ${error.message}`);
   }
 });
 
 /**
- * Get search suggestions
+ * Get search suggestions for auto-complete
  * GET /api/v1/search/suggestions?q={query}
  */
 const getSearchSuggestions = asyncHandler(async (req, res) => {
   const { q: query } = req.query;
   const currentUserId = req.user._id;
 
-  // Input validation
-  if (!query || typeof query !== "string") {
-    return res
-      .status(200)
-      .json(new ApiResponse(200, { suggestions: [] }, "No query provided"));
-  }
-
-  if (query.trim().length < 1) {
-    return res
-      .status(200)
-      .json(new ApiResponse(200, { suggestions: [] }, "Query too short"));
+  if (!query || query.trim().length < 1) {
+    return res.status(200).json(new ApiResponse(200, [], "No query provided"));
   }
 
   try {
-    const result = await SearchService.generateSearchSuggestions(
-      query,
+    const suggestions = await SearchService.generateSearchSuggestions(
+      query.trim(),
       currentUserId
     );
 
@@ -473,15 +376,12 @@ const getSearchSuggestions = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          result,
-          `Generated ${result.suggestions.length} suggestions`
+          suggestions,
+          `Generated ${suggestions.length} suggestions`
         )
       );
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(500, `Suggestion generation failed: ${error.message}`);
+    throw new ApiError(500, `Suggestions failed: ${error.message}`);
   }
 });
 

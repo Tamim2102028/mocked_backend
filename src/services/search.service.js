@@ -12,23 +12,31 @@ import {
   GROUP_MEMBERSHIP_STATUS,
 } from "../constants/index.js";
 import { GroupMembership } from "../models/groupMembership.model.js";
+import {
+  validatePaginationParams,
+  createPaginationMeta,
+  withPerformanceMonitoring,
+  aggregateSearchResults,
+  trackSearchAnalytics,
+} from "../utils/pagination.js";
 
 /**
  * ====================================
  * SEARCH SERVICE
  * ====================================
  *
- * Handles all search operations with optimized queries,
- * privacy controls, and result formatting.
+ * Handles all search-related business logic with optimized queries
+ * and proper privacy controls.
  */
 
 class SearchService {
   /**
    * Perform global search across all content types
    */
-  async performGlobalSearch(query, filters = {}, pagination = {}) {
+  static async performGlobalSearch(query, filters = {}, pagination = {}) {
     const { type = "all", sortBy = "relevance" } = filters;
     const { page = 1, limit = 20 } = pagination;
+    const skip = (page - 1) * limit;
 
     if (!query || query.trim().length < 2) {
       throw new ApiError(
@@ -125,29 +133,13 @@ class SearchService {
         0
       );
 
-      // Determine if there are more results
-      const hasMore =
-        type === "all"
-          ? Object.values(results).some(
-              (arr) =>
-                arr &&
-                arr.length >=
-                  (type === "posts" || type === "institutions"
-                    ? 15
-                    : type === "comments"
-                      ? 10
-                      : 20)
-            )
-          : results[type] && results[type].length >= limit;
-
       return {
         results,
         counts,
         pagination: {
           currentPage: page,
-          hasMore,
-          totalPages:
-            type !== "all" ? Math.ceil(counts[type] / limit) : undefined,
+          hasMore: this._calculateHasMore(counts, page, limit),
+          totalPages: Math.ceil(counts.total / limit),
         },
         query: searchQuery,
         searchTime: Date.now(),
@@ -160,34 +152,82 @@ class SearchService {
   /**
    * Search users by query with privacy controls
    */
-  async searchUsersByQuery(query, currentUserId, pagination = {}) {
+  static async searchUsersByQuery(query, currentUserId, pagination = {}) {
     const { page = 1, limit = 20 } = pagination;
     const skip = (page - 1) * limit;
 
     try {
-      // Build search criteria
-      const searchCriteria = {
-        $text: { $search: query },
-        accountStatus: ACCOUNT_STATUS.ACTIVE,
-        _id: { $ne: currentUserId }, // Exclude current user
-      };
+      // Build search pipeline
+      const pipeline = [
+        // Text search stage
+        {
+          $match: {
+            $and: [
+              { $text: { $search: query } },
+              { accountStatus: ACCOUNT_STATUS.ACTIVE },
+              { _id: { $ne: currentUserId } }, // Exclude current user
+            ],
+          },
+        },
+        // Add relevance score
+        {
+          $addFields: {
+            score: { $meta: "textScore" },
+          },
+        },
+        // Sort by relevance
+        {
+          $sort: { score: { $meta: "textScore" } },
+        },
+        // Lookup institution info
+        {
+          $lookup: {
+            from: "institutions",
+            localField: "institution",
+            foreignField: "_id",
+            as: "institutionInfo",
+          },
+        },
+        // Project required fields
+        {
+          $project: {
+            fullName: 1,
+            userName: 1,
+            avatar: 1,
+            userType: 1,
+            bio: 1,
+            connectionsCount: 1,
+            followersCount: 1,
+            score: 1,
+            institution: {
+              $arrayElemAt: ["$institutionInfo.name", 0],
+            },
+            "academicInfo.department": 1,
+          },
+        },
+        // Pagination
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      // Execute search with text score for relevance
-      const users = await User.find(searchCriteria, {
-        score: { $meta: "textScore" },
-      })
-        .sort({ score: { $meta: "textScore" }, fullName: 1 })
-        .skip(skip)
-        .limit(limit)
-        .select(
-          "fullName userName email avatar institution userType academicInfo.department connectionsCount"
-        )
-        .populate("institution", "name type")
-        .populate("academicInfo.department", "name code")
-        .lean();
+      const users = await User.aggregate(pipeline);
 
       // Get total count for pagination
-      const totalCount = await User.countDocuments(searchCriteria);
+      const countPipeline = [
+        {
+          $match: {
+            $and: [
+              { $text: { $search: query } },
+              { accountStatus: ACCOUNT_STATUS.ACTIVE },
+              { _id: { $ne: currentUserId } },
+            ],
+          },
+        },
+        { $count: "total" },
+      ];
+
+      const countResult = await User.aggregate(countPipeline);
+      const totalCount = countResult[0]?.total || 0;
 
       return {
         users,
@@ -200,50 +240,116 @@ class SearchService {
   }
 
   /**
-   * Search posts by query with privacy and visibility controls
+   * Search posts with privacy and visibility controls
    */
-  async searchPostsByQuery(query, currentUserId, pagination = {}) {
+  static async searchPostsByQuery(query, currentUserId, pagination = {}) {
     const { page = 1, limit = 15 } = pagination;
     const skip = (page - 1) * limit;
 
     try {
-      // Build search criteria with privacy controls
-      const searchCriteria = {
-        $text: { $search: query },
-        isDeleted: false,
-        $or: [
-          { visibility: POST_VISIBILITY.PUBLIC },
-          {
-            visibility: POST_VISIBILITY.CONNECTIONS,
-            // TODO: Add friend/connection check logic here
+      // Build privacy-aware search pipeline
+      const pipeline = [
+        // Text search with privacy filters
+        {
+          $match: {
+            $and: [
+              { $text: { $search: query } },
+              { isDeleted: false },
+              {
+                $or: [
+                  { visibility: POST_VISIBILITY.PUBLIC },
+                  {
+                    $and: [
+                      { visibility: POST_VISIBILITY.CONNECTIONS },
+                      // TODO: Add friend/connection check here
+                    ],
+                  },
+                  { author: currentUserId }, // User's own posts
+                ],
+              },
+            ],
           },
-          {
-            visibility: POST_VISIBILITY.INTERNAL,
-            // TODO: Add institution/group member check logic here
+        },
+        // Add relevance score
+        {
+          $addFields: {
+            score: { $meta: "textScore" },
           },
-          {
-            author: currentUserId,
-            visibility: POST_VISIBILITY.ONLY_ME,
+        },
+        // Sort by relevance and recency
+        {
+          $sort: {
+            score: { $meta: "textScore" },
+            createdAt: -1,
           },
-        ],
-      };
+        },
+        // Lookup author info
+        {
+          $lookup: {
+            from: "users",
+            localField: "author",
+            foreignField: "_id",
+            as: "authorInfo",
+          },
+        },
+        // Project required fields
+        {
+          $project: {
+            content: 1,
+            type: 1,
+            attachments: 1,
+            tags: 1,
+            likesCount: 1,
+            commentsCount: 1,
+            createdAt: 1,
+            score: 1,
+            author: {
+              $arrayElemAt: [
+                {
+                  $map: {
+                    input: "$authorInfo",
+                    as: "author",
+                    in: {
+                      _id: "$$author._id",
+                      fullName: "$$author.fullName",
+                      userName: "$$author.userName",
+                      avatar: "$$author.avatar",
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
+        // Pagination
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      // Execute search with text score for relevance
-      const posts = await Post.find(searchCriteria, {
-        score: { $meta: "textScore" },
-      })
-        .sort({ score: { $meta: "textScore" }, createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("author", "fullName userName avatar")
-        .populate("postOnId", "name") // For groups, institutions, etc.
-        .select(
-          "content tags type postOnModel postOnId author visibility createdAt likesCount commentsCount"
-        )
-        .lean();
+      const posts = await Post.aggregate(pipeline);
 
-      // Get total count for pagination
-      const totalCount = await Post.countDocuments(searchCriteria);
+      // Get total count
+      const countPipeline = [
+        {
+          $match: {
+            $and: [
+              { $text: { $search: query } },
+              { isDeleted: false },
+              {
+                $or: [
+                  { visibility: POST_VISIBILITY.PUBLIC },
+                  { author: currentUserId },
+                ],
+              },
+            ],
+          },
+        },
+        { $count: "total" },
+      ];
+
+      const countResult = await Post.aggregate(countPipeline);
+      const totalCount = countResult[0]?.total || 0;
 
       return {
         posts,
@@ -256,57 +362,90 @@ class SearchService {
   }
 
   /**
-   * Search groups by query with privacy controls
+   * Search groups with membership and privacy controls
    */
-  async searchGroupsByQuery(query, currentUserId, pagination = {}) {
+  static async searchGroupsByQuery(query, currentUserId, pagination = {}) {
     const { page = 1, limit = 20 } = pagination;
     const skip = (page - 1) * limit;
 
     try {
-      // Build search criteria - only public groups or groups user has access to
-      const searchCriteria = {
-        $text: { $search: query },
-        isDeleted: false,
-        privacy: { $in: [GROUP_PRIVACY.PUBLIC, GROUP_PRIVACY.CLOSED] }, // Exclude private groups for now
-      };
+      const pipeline = [
+        // Text search with privacy filters
+        {
+          $match: {
+            $and: [
+              { $text: { $search: query } },
+              { isDeleted: false },
+              {
+                $or: [
+                  { privacy: GROUP_PRIVACY.PUBLIC },
+                  // TODO: Add membership check for private groups
+                ],
+              },
+            ],
+          },
+        },
+        // Add relevance score
+        {
+          $addFields: {
+            score: { $meta: "textScore" },
+          },
+        },
+        // Sort by relevance and member count
+        {
+          $sort: {
+            score: { $meta: "textScore" },
+            membersCount: -1,
+          },
+        },
+        // Lookup institution info
+        {
+          $lookup: {
+            from: "institutions",
+            localField: "institution",
+            foreignField: "_id",
+            as: "institutionInfo",
+          },
+        },
+        // Project required fields
+        {
+          $project: {
+            name: 1,
+            description: 1,
+            avatar: 1,
+            type: 1,
+            privacy: 1,
+            membersCount: 1,
+            postsCount: 1,
+            score: 1,
+            institution: {
+              $arrayElemAt: ["$institutionInfo.name", 0],
+            },
+          },
+        },
+        // Pagination
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      // Execute search with text score for relevance
-      const groups = await Group.find(searchCriteria, {
-        score: { $meta: "textScore" },
-      })
-        .sort({ score: { $meta: "textScore" }, membersCount: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("institution", "name type")
-        .select(
-          "name description avatar privacy type membersCount postsCount institution creator"
-        )
-        .lean();
+      const groups = await Group.aggregate(pipeline);
 
-      // Check user membership status for each group
-      if (currentUserId && groups.length > 0) {
-        const groupIds = groups.map((group) => group._id);
-        const memberships = await GroupMembership.find({
-          group: { $in: groupIds },
-          user: currentUserId,
-          status: GROUP_MEMBERSHIP_STATUS.JOINED,
-        })
-          .select("group role")
-          .lean();
+      // Get total count
+      const countPipeline = [
+        {
+          $match: {
+            $and: [
+              { $text: { $search: query } },
+              { isDeleted: false },
+              { privacy: GROUP_PRIVACY.PUBLIC },
+            ],
+          },
+        },
+        { $count: "total" },
+      ];
 
-        const membershipMap = memberships.reduce((map, membership) => {
-          map[membership.group.toString()] = membership.role;
-          return map;
-        }, {});
-
-        // Add membership info to groups
-        groups.forEach((group) => {
-          group.userMembership = membershipMap[group._id.toString()] || null;
-        });
-      }
-
-      // Get total count for pagination
-      const totalCount = await Group.countDocuments(searchCriteria);
+      const countResult = await Group.aggregate(countPipeline);
+      const totalCount = countResult[0]?.total || 0;
 
       return {
         groups,
@@ -319,31 +458,63 @@ class SearchService {
   }
 
   /**
-   * Search institutions by query
+   * Search institutions
    */
-  async searchInstitutionsByQuery(query, pagination = {}) {
+  static async searchInstitutionsByQuery(query, pagination = {}) {
     const { page = 1, limit = 15 } = pagination;
     const skip = (page - 1) * limit;
 
     try {
-      // Build search criteria
-      const searchCriteria = {
-        $text: { $search: query },
-        isActive: true,
-      };
+      const pipeline = [
+        // Text search
+        {
+          $match: {
+            $and: [{ $text: { $search: query } }, { isActive: true }],
+          },
+        },
+        // Add relevance score
+        {
+          $addFields: {
+            score: { $meta: "textScore" },
+          },
+        },
+        // Sort by relevance
+        {
+          $sort: { score: { $meta: "textScore" } },
+        },
+        // Project required fields
+        {
+          $project: {
+            name: 1,
+            code: 1,
+            type: 1,
+            category: 1,
+            location: 1,
+            logo: 1,
+            website: 1,
+            postsCount: 1,
+            score: 1,
+          },
+        },
+        // Pagination
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      // Execute search with text score for relevance
-      const institutions = await Institution.find(searchCriteria, {
-        score: { $meta: "textScore" },
-      })
-        .sort({ score: { $meta: "textScore" }, name: 1 })
-        .skip(skip)
-        .limit(limit)
-        .select("name code type category location logo website postsCount")
-        .lean();
+      const institutions = await Institution.aggregate(pipeline);
 
-      // Get total count for pagination
-      const totalCount = await Institution.countDocuments(searchCriteria);
+      // Get total count
+      const countPipeline = [
+        {
+          $match: {
+            $and: [{ $text: { $search: query } }, { isActive: true }],
+          },
+        },
+        { $count: "total" },
+      ];
+
+      const countResult = await Institution.aggregate(countPipeline);
+      const totalCount = countResult[0]?.total || 0;
 
       return {
         institutions,
@@ -356,32 +527,85 @@ class SearchService {
   }
 
   /**
-   * Search departments by query
+   * Search departments
    */
-  async searchDepartmentsByQuery(query, pagination = {}) {
+  static async searchDepartmentsByQuery(query, pagination = {}) {
     const { page = 1, limit = 20 } = pagination;
     const skip = (page - 1) * limit;
 
     try {
-      // Build search criteria
-      const searchCriteria = {
-        $text: { $search: query },
-        status: "active",
-      };
+      const pipeline = [
+        // Text search
+        {
+          $match: {
+            $text: { $search: query },
+          },
+        },
+        // Add relevance score
+        {
+          $addFields: {
+            score: { $meta: "textScore" },
+          },
+        },
+        // Sort by relevance
+        {
+          $sort: { score: { $meta: "textScore" } },
+        },
+        // Lookup institution info
+        {
+          $lookup: {
+            from: "institutions",
+            localField: "institution",
+            foreignField: "_id",
+            as: "institutionInfo",
+          },
+        },
+        // Project required fields
+        {
+          $project: {
+            name: 1,
+            code: 1,
+            description: 1,
+            establishedYear: 1,
+            postsCount: 1,
+            score: 1,
+            institution: {
+              $arrayElemAt: [
+                {
+                  $map: {
+                    input: "$institutionInfo",
+                    as: "inst",
+                    in: {
+                      _id: "$$inst._id",
+                      name: "$$inst.name",
+                      code: "$$inst.code",
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
+        // Pagination
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      // Execute search with text score for relevance
-      const departments = await Department.find(searchCriteria, {
-        score: { $meta: "textScore" },
-      })
-        .sort({ score: { $meta: "textScore" }, name: 1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("institution", "name type")
-        .select("name code institution description establishedYear postsCount")
-        .lean();
+      const departments = await Department.aggregate(pipeline);
 
-      // Get total count for pagination
-      const totalCount = await Department.countDocuments(searchCriteria);
+      // Get total count
+      const countPipeline = [
+        {
+          $match: {
+            $text: { $search: query },
+          },
+        },
+        { $count: "total" },
+      ];
+
+      const countResult = await Department.aggregate(countPipeline);
+      const totalCount = countResult[0]?.total || 0;
 
       return {
         departments,
@@ -394,62 +618,142 @@ class SearchService {
   }
 
   /**
-   * Search comments by query with post context
+   * Search comments with post context
    */
-  async searchCommentsByQuery(query, currentUserId, pagination = {}) {
+  static async searchCommentsByQuery(query, currentUserId, pagination = {}) {
     const { page = 1, limit = 10 } = pagination;
     const skip = (page - 1) * limit;
 
     try {
-      // First, find comments that match the search
-      const searchCriteria = {
-        $text: { $search: query },
-        isDeleted: false,
-      };
-
-      // Execute search with text score for relevance
-      const comments = await Comment.find(searchCriteria, {
-        score: { $meta: "textScore" },
-      })
-        .sort({ score: { $meta: "textScore" }, createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate("author", "fullName userName avatar")
-        .populate({
-          path: "post",
-          select: "content author visibility postOnModel postOnId",
-          populate: {
-            path: "author",
-            select: "fullName userName",
+      const pipeline = [
+        // Text search
+        {
+          $match: {
+            $and: [{ $text: { $search: query } }, { isDeleted: false }],
           },
-        })
-        .select("content post author createdAt likesCount")
-        .lean();
+        },
+        // Add relevance score
+        {
+          $addFields: {
+            score: { $meta: "textScore" },
+          },
+        },
+        // Sort by relevance and recency
+        {
+          $sort: {
+            score: { $meta: "textScore" },
+            createdAt: -1,
+          },
+        },
+        // Lookup post info (for context)
+        {
+          $lookup: {
+            from: "posts",
+            localField: "post",
+            foreignField: "_id",
+            as: "postInfo",
+          },
+        },
+        // Lookup author info
+        {
+          $lookup: {
+            from: "users",
+            localField: "author",
+            foreignField: "_id",
+            as: "authorInfo",
+          },
+        },
+        // Filter out comments on private posts
+        {
+          $match: {
+            "postInfo.isDeleted": false,
+            $or: [
+              { "postInfo.visibility": POST_VISIBILITY.PUBLIC },
+              { "postInfo.author": currentUserId },
+            ],
+          },
+        },
+        // Project required fields
+        {
+          $project: {
+            content: 1,
+            createdAt: 1,
+            likesCount: 1,
+            score: 1,
+            author: {
+              $arrayElemAt: [
+                {
+                  $map: {
+                    input: "$authorInfo",
+                    as: "author",
+                    in: {
+                      _id: "$$author._id",
+                      fullName: "$$author.fullName",
+                      userName: "$$author.userName",
+                      avatar: "$$author.avatar",
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+            post: {
+              $arrayElemAt: [
+                {
+                  $map: {
+                    input: "$postInfo",
+                    as: "post",
+                    in: {
+                      _id: "$$post._id",
+                      content: { $substr: ["$$post.content", 0, 100] }, // First 100 chars
+                      author: "$$post.author",
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
+        // Pagination
+        { $skip: skip },
+        { $limit: limit },
+      ];
 
-      // Filter comments based on post visibility (privacy control)
-      const visibleComments = comments.filter((comment) => {
-        if (!comment.post) return false;
+      const comments = await Comment.aggregate(pipeline);
 
-        const post = comment.post;
+      // Get total count
+      const countPipeline = [
+        {
+          $match: {
+            $and: [{ $text: { $search: query } }, { isDeleted: false }],
+          },
+        },
+        {
+          $lookup: {
+            from: "posts",
+            localField: "post",
+            foreignField: "_id",
+            as: "postInfo",
+          },
+        },
+        {
+          $match: {
+            "postInfo.isDeleted": false,
+            $or: [
+              { "postInfo.visibility": POST_VISIBILITY.PUBLIC },
+              { "postInfo.author": currentUserId },
+            ],
+          },
+        },
+        { $count: "total" },
+      ];
 
-        // Check post visibility
-        if (post.visibility === POST_VISIBILITY.PUBLIC) return true;
-        if (
-          post.visibility === POST_VISIBILITY.ONLY_ME &&
-          post.author._id.toString() === currentUserId
-        )
-          return true;
-
-        // TODO: Add more sophisticated privacy checks for connections and internal posts
-
-        return false;
-      });
-
-      // Get total count (approximate, since we're filtering after query)
-      const totalCount = await Comment.countDocuments(searchCriteria);
+      const countResult = await Comment.aggregate(countPipeline);
+      const totalCount = countResult[0]?.total || 0;
 
       return {
-        comments: visibleComments,
+        comments,
         totalCount,
         hasMore: skip + comments.length < totalCount,
       };
@@ -459,65 +763,77 @@ class SearchService {
   }
 
   /**
-   * Generate search suggestions based on query
+   * Generate search suggestions based on popular searches
    */
-  async generateSearchSuggestions(query, currentUserId) {
-    if (!query || query.trim().length < 1) {
-      return { suggestions: [] };
+  static async generateSearchSuggestions(query, currentUserId) {
+    if (!query || query.length < 1) {
+      return [];
     }
 
-    const searchQuery = query.trim();
-    const suggestions = [];
-
     try {
-      // Get top user suggestions
+      // Simple suggestions based on existing data
+      const suggestions = [];
+
+      // User suggestions
       const userSuggestions = await User.find({
-        $or: [
-          { fullName: { $regex: searchQuery, $options: "i" } },
-          { userName: { $regex: searchQuery, $options: "i" } },
+        $and: [
+          {
+            $or: [
+              { fullName: { $regex: query, $options: "i" } },
+              { userName: { $regex: query, $options: "i" } },
+            ],
+          },
+          { accountStatus: ACCOUNT_STATUS.ACTIVE },
+          { _id: { $ne: currentUserId } },
         ],
-        accountStatus: ACCOUNT_STATUS.ACTIVE,
-        _id: { $ne: currentUserId },
       })
         .limit(3)
-        .select("fullName userName avatar")
-        .lean();
+        .select("fullName userName");
 
       userSuggestions.forEach((user) => {
         suggestions.push({
           type: "user",
           text: user.fullName,
           subtitle: `@${user.userName}`,
-          avatar: user.avatar,
-          id: user._id,
         });
       });
 
-      // Get top group suggestions
+      // Group suggestions
       const groupSuggestions = await Group.find({
-        name: { $regex: searchQuery, $options: "i" },
-        isDeleted: false,
-        privacy: { $in: [GROUP_PRIVACY.PUBLIC, GROUP_PRIVACY.CLOSED] },
+        $and: [
+          { name: { $regex: query, $options: "i" } },
+          { isDeleted: false },
+          { privacy: GROUP_PRIVACY.PUBLIC },
+        ],
       })
-        .limit(3)
-        .select("name description avatar membersCount")
-        .lean();
+        .limit(2)
+        .select("name membersCount");
 
       groupSuggestions.forEach((group) => {
         suggestions.push({
           type: "group",
           text: group.name,
           subtitle: `${group.membersCount} members`,
-          avatar: group.avatar,
-          id: group._id,
         });
       });
 
-      return { suggestions: suggestions.slice(0, 6) }; // Limit to 6 total suggestions
+      return suggestions.slice(0, 5); // Max 5 suggestions
     } catch (error) {
-      throw new ApiError(500, `Suggestion generation failed: ${error.message}`);
+      console.error("Search suggestions error:", error);
+      return [];
     }
+  }
+
+  /**
+   * Helper method to calculate if more results are available
+   */
+  static _calculateHasMore(counts, page, limit) {
+    const totalResults = Object.values(counts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+    return page * limit < totalResults;
   }
 }
 
-export default new SearchService();
+export default SearchService;

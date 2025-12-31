@@ -30,6 +30,11 @@ app.use(cookieParser());
 import authRouter from "./routes/auth.routes.js";
 app.use("/api/v1/users", authRouter);
 
+// Add a simple test route to debug
+app.get("/api/v1/test", (req, res) => {
+  res.json({ message: "API is working!" });
+});
+
 import { errorHandler } from "./middlewares/error.middleware.js";
 import crRouter from "./routes/cr.routes.js";
 import groupRouter from "./routes/group.routes.js";

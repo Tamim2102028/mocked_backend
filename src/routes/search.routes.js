@@ -10,63 +10,47 @@ import {
   getSearchSuggestions,
 } from "../controllers/search.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { cacheMiddleware } from "../utils/cache.js";
+
+const router = Router();
 
 /**
  * ====================================
  * SEARCH ROUTES
  * ====================================
  *
- * All search-related routes with authentication middleware.
- * Rate limiting can be added here for production use.
+ * All search endpoints require authentication to ensure proper
+ * privacy controls and personalized results.
  */
 
-const router = Router();
+// Global search endpoint - searches across all content types
+router
+  .route("/global")
+  .get(verifyJWT, cacheMiddleware(3 * 60 * 1000), globalSearch);
 
-// Apply authentication middleware to all search routes
-router.use(verifyJWT);
+// Category-specific search endpoints
+router
+  .route("/users")
+  .get(verifyJWT, cacheMiddleware(5 * 60 * 1000), searchUsers);
+router
+  .route("/posts")
+  .get(verifyJWT, cacheMiddleware(2 * 60 * 1000), searchPosts);
+router
+  .route("/groups")
+  .get(verifyJWT, cacheMiddleware(10 * 60 * 1000), searchGroups);
+router
+  .route("/institutions")
+  .get(verifyJWT, cacheMiddleware(15 * 60 * 1000), searchInstitutions);
+router
+  .route("/departments")
+  .get(verifyJWT, cacheMiddleware(15 * 60 * 1000), searchDepartments);
+router
+  .route("/comments")
+  .get(verifyJWT, cacheMiddleware(1 * 60 * 1000), searchComments);
 
-/**
- * Global Search Routes
- */
-
-// Global search across all content types
-// GET /api/v1/search/global?q=javascript&type=all&page=1&limit=20
-router.route("/global").get(globalSearch);
-
-/**
- * Category-Specific Search Routes
- */
-
-// Search users
-// GET /api/v1/search/users?q=tamim&page=1&limit=20
-router.route("/users").get(searchUsers);
-
-// Search posts
-// GET /api/v1/search/posts?q=programming&page=1&limit=15
-router.route("/posts").get(searchPosts);
-
-// Search groups
-// GET /api/v1/search/groups?q=computer&page=1&limit=20
-router.route("/groups").get(searchGroups);
-
-// Search institutions
-// GET /api/v1/search/institutions?q=university&page=1&limit=15
-router.route("/institutions").get(searchInstitutions);
-
-// Search departments
-// GET /api/v1/search/departments?q=cse&page=1&limit=20
-router.route("/departments").get(searchDepartments);
-
-// Search comments
-// GET /api/v1/search/comments?q=helpful&page=1&limit=10
-router.route("/comments").get(searchComments);
-
-/**
- * Search Utility Routes
- */
-
-// Get search suggestions for autocomplete
-// GET /api/v1/search/suggestions?q=tam
-router.route("/suggestions").get(getSearchSuggestions);
+// Search suggestions for auto-complete (shorter cache time)
+router
+  .route("/suggestions")
+  .get(verifyJWT, cacheMiddleware(30 * 1000), getSearchSuggestions);
 
 export default router;

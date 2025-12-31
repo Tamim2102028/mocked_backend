@@ -152,6 +152,29 @@ userSchema.index(
     },
   }
 );
+// ✅ Search Indexes for Text Search
+userSchema.index(
+  {
+    fullName: "text",
+    userName: "text",
+    email: "text",
+  },
+  {
+    weights: {
+      fullName: 10, // Highest priority for full name matches
+      userName: 5, // Medium priority for username matches
+      email: 1, // Lowest priority for email matches
+    },
+    name: "user_search_text_index",
+  }
+);
+
+// ✅ Compound Indexes for Filtered Search
+userSchema.index({ fullName: 1, institution: 1 });
+userSchema.index({ userName: 1, userType: 1 });
+userSchema.index({ institution: 1, "academicInfo.department": 1, userType: 1 });
+
+// ✅ Existing Indexes (keeping for compatibility)
 userSchema.index({ nickName: 1, fullName: 1 });
 userSchema.index({ skills: 1 });
 userSchema.index({ institution: 1, "academicInfo.department": 1 });

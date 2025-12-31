@@ -60,6 +60,26 @@ const institutionSchema = new Schema(
   { timestamps: true }
 );
 
+// ✅ Search Indexes for Text Search
+institutionSchema.index(
+  {
+    name: "text",
+    location: "text",
+    code: "text",
+  },
+  {
+    weights: {
+      name: 10, // Highest priority for name matches
+      code: 8, // High priority for code matches
+      location: 3, // Lower priority for location matches
+    },
+    name: "institution_search_text_index",
+  }
+);
+
+// ✅ Compound Indexes for Filtered Search
 institutionSchema.index({ validDomains: 1 });
+institutionSchema.index({ type: 1, category: 1 });
+institutionSchema.index({ location: 1, type: 1 });
 
 export const Institution = mongoose.model("Institution", institutionSchema);

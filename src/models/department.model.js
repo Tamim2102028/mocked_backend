@@ -39,7 +39,24 @@ const departmentSchema = new Schema(
   { timestamps: true }
 );
 
+// ✅ Search Indexes for Text Search
+departmentSchema.index(
+  {
+    name: "text",
+    code: "text",
+  },
+  {
+    weights: {
+      name: 10, // Higher priority for name matches
+      code: 8, // High priority for code matches (CSE, EEE, etc.)
+    },
+    name: "department_search_text_index",
+  }
+);
+
+// ✅ Compound Indexes for Filtered Search and Performance
 departmentSchema.index({ institution: 1, name: 1 }, { unique: true });
 departmentSchema.index({ institution: 1, code: 1 }, { unique: true });
+departmentSchema.index({ institution: 1, status: 1 });
 
 export const Department = mongoose.model("Department", departmentSchema);

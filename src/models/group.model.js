@@ -66,9 +66,24 @@ const groupSchema = new Schema(
   { timestamps: true }
 );
 
-groupSchema.index({
-  institution: 1,
-  type: 1,
-});
+// ✅ Search Indexes for Text Search
+groupSchema.index(
+  {
+    name: "text",
+    description: "text",
+  },
+  {
+    weights: {
+      name: 10, // Higher priority for name matches
+      description: 3, // Lower priority for description matches
+    },
+    name: "group_search_text_index",
+  }
+);
+
+// ✅ Compound Indexes for Filtered Search
+groupSchema.index({ institution: 1, type: 1 });
+groupSchema.index({ privacy: 1, institution: 1 });
+groupSchema.index({ name: 1, privacy: 1 });
 
 export const Group = mongoose.model("Group", groupSchema);

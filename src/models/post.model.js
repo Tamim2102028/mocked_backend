@@ -97,7 +97,25 @@ const postSchema = new Schema(
   { timestamps: true }
 );
 
+// ✅ Search Indexes for Text Search
+postSchema.index(
+  {
+    content: "text",
+    tags: "text",
+  },
+  {
+    weights: {
+      content: 10, // Higher priority for content matches
+      tags: 5, // Medium priority for tag matches
+    },
+    name: "post_search_text_index",
+  }
+);
+
+// ✅ Compound Indexes for Filtered Search and Performance
 postSchema.index({ postOnId: 1, postOnModel: 1, createdAt: -1 });
 postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ visibility: 1, createdAt: -1 });
+postSchema.index({ author: 1, visibility: 1, isDeleted: 1 });
 
 export const Post = mongoose.model("Post", postSchema);

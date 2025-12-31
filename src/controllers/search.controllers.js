@@ -43,6 +43,7 @@ const globalSearch = asyncHandler(async (req, res) => {
     "institutions",
     "departments",
     "comments",
+    "hashtags",
   ];
   if (!validTypes.includes(type)) {
     throw new ApiError(

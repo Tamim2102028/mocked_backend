@@ -108,6 +108,13 @@ class SearchService {
         );
       }
 
+      if (type === "all" || type === "hashtags") {
+        // Simple extraction from posts or a dedicated aggregation if exists
+        // For now, we return empty or extract from matched posts
+        results.hashtags = [];
+        counts.hashtags = 0;
+      }
+
       await Promise.all(searchPromises);
 
       // Calculate total count
@@ -229,7 +236,7 @@ class SearchService {
         .populate("author", "fullName userName avatar")
         .populate("postOnId", "name") // For groups, institutions, etc.
         .select(
-          "content tags type postOnModel postOnId author visibility createdAt likesCount commentsCount"
+          "content tags attachments type postOnModel postOnId author visibility createdAt likesCount commentsCount"
         )
         .lean();
 
@@ -270,7 +277,7 @@ class SearchService {
         .limit(limit)
         .populate("institution", "name type")
         .select(
-          "name description avatar privacy type membersCount postsCount institution creator"
+          "name slug description avatar privacy type membersCount postsCount institution creator"
         )
         .lean();
 

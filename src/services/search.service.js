@@ -48,6 +48,7 @@ class SearchService {
     const searchQuery = query.trim();
     const results = {};
     const counts = {};
+    const startTime = Date.now();
 
     try {
       // Parallel search across all categories for better performance
@@ -133,16 +134,51 @@ class SearchService {
         0
       );
 
+      const searchTime = Date.now() - startTime;
+
+      // Format results with nested pagination
+      const formattedResults = {};
+
+      Object.keys(results).forEach((category) => {
+        if (results[category]) {
+          const categoryLimit =
+            category === "posts"
+              ? 15
+              : category === "institutions"
+                ? 15
+                : category === "comments"
+                  ? 10
+                  : 20;
+          const categoryCount = counts[category];
+
+          formattedResults[category] = {
+            data: results[category],
+            pagination: {
+              totalDocs: categoryCount,
+              limit: categoryLimit,
+              page: page,
+              totalPages: Math.ceil(categoryCount / categoryLimit),
+              hasNextPage: page < Math.ceil(categoryCount / categoryLimit),
+              hasPrevPage: page > 1,
+            },
+          };
+        }
+      });
+
       return {
-        results,
-        counts,
+        results: formattedResults,
         pagination: {
-          currentPage: page,
-          hasMore: this._calculateHasMore(counts, page, limit),
+          totalDocs: counts.total,
+          limit: limit,
+          page: page,
           totalPages: Math.ceil(counts.total / limit),
+          hasNextPage: page < Math.ceil(counts.total / limit),
+          hasPrevPage: page > 1,
         },
-        query: searchQuery,
-        searchTime: Date.now(),
+        meta: {
+          query: searchQuery,
+          searchTime,
+        },
       };
     } catch (error) {
       throw new ApiError(500, `Search failed: ${error.message}`);
@@ -155,6 +191,7 @@ class SearchService {
   static async searchUsersByQuery(query, currentUserId, pagination = {}) {
     const { page = 1, limit = 20 } = pagination;
     const skip = (page - 1) * limit;
+    const startTime = Date.now();
 
     try {
       // Build search pipeline
@@ -228,11 +265,22 @@ class SearchService {
 
       const countResult = await User.aggregate(countPipeline);
       const totalCount = countResult[0]?.total || 0;
+      const searchTime = Date.now() - startTime;
 
       return {
         users,
-        totalCount,
-        hasMore: skip + users.length < totalCount,
+        pagination: {
+          totalDocs: totalCount,
+          limit: limit,
+          page: page,
+          totalPages: Math.ceil(totalCount / limit),
+          hasNextPage: page < Math.ceil(totalCount / limit),
+          hasPrevPage: page > 1,
+        },
+        meta: {
+          query: query.trim(),
+          searchTime,
+        },
       };
     } catch (error) {
       throw new ApiError(500, `User search failed: ${error.message}`);
@@ -767,7 +815,20 @@ class SearchService {
    */
   static async generateSearchSuggestions(query, currentUserId) {
     if (!query || query.length < 1) {
-      return [];
+      return {
+        suggestions: [],
+        pagination: {
+          totalDocs: 0,
+          limit: 5,
+          page: 1,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        meta: {
+          query: "",
+        },
+      };
     }
 
     try {
@@ -817,10 +878,38 @@ class SearchService {
         });
       });
 
-      return suggestions.slice(0, 5); // Max 5 suggestions
+      const finalSuggestions = suggestions.slice(0, 5); // Max 5 suggestions
+
+      return {
+        suggestions: finalSuggestions,
+        pagination: {
+          totalDocs: finalSuggestions.length,
+          limit: 5,
+          page: 1,
+          totalPages: Math.ceil(finalSuggestions.length / 5),
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        meta: {
+          query: query.trim(),
+        },
+      };
     } catch (error) {
       console.error("Search suggestions error:", error);
-      return [];
+      return {
+        suggestions: [],
+        pagination: {
+          totalDocs: 0,
+          limit: 5,
+          page: 1,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+        meta: {
+          query: query.trim(),
+        },
+      };
     }
   }
 

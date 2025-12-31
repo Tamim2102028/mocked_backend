@@ -56,25 +56,16 @@ const globalSearch = asyncHandler(async (req, res) => {
   );
 
   try {
-    const startTime = Date.now();
-
-    const searchResults = await SearchService.performGlobalSearch(
+    const searchData = await SearchService.performGlobalSearch(
       query,
       { type, currentUserId, sortBy },
       { page: pageNum, limit: limitNum }
     );
 
-    const searchTime = Date.now() - startTime;
-    searchResults.searchTime = searchTime;
-
     return res
       .status(200)
       .json(
-        new ApiResponse(
-          200,
-          searchResults,
-          `Search completed in ${searchTime}ms`
-        )
+        new ApiResponse(200, searchData, `Global search completed successfully`)
       );
   } catch (error) {
     throw new ApiError(500, `Search failed: ${error.message}`);
@@ -101,27 +92,21 @@ const searchUsers = asyncHandler(async (req, res) => {
   }
 
   try {
-    const startTime = Date.now();
-
-    const result = await SearchService.searchUsersByQuery(
+    const searchData = await SearchService.searchUsersByQuery(
       query,
       currentUserId,
       { page: pageNum, limit: limitNum }
     );
 
-    const searchTime = Date.now() - startTime;
-
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          ...result,
-          searchTime,
-          query: query.trim(),
-        },
-        `Found ${result.users.length} users`
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          searchData,
+          `Found ${searchData.users.length} users`
+        )
+      );
   } catch (error) {
     throw new ApiError(500, `User search failed: ${error.message}`);
   }
@@ -147,27 +132,21 @@ const searchPosts = asyncHandler(async (req, res) => {
   }
 
   try {
-    const startTime = Date.now();
-
-    const result = await SearchService.searchPostsByQuery(
+    const searchData = await SearchService.searchPostsByQuery(
       query,
       currentUserId,
       { page: pageNum, limit: limitNum }
     );
 
-    const searchTime = Date.now() - startTime;
-
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          ...result,
-          searchTime,
-          query: query.trim(),
-        },
-        `Found ${result.posts.length} posts`
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          searchData,
+          `Found ${searchData.posts.length} posts`
+        )
+      );
   } catch (error) {
     throw new ApiError(500, `Post search failed: ${error.message}`);
   }
@@ -193,27 +172,21 @@ const searchGroups = asyncHandler(async (req, res) => {
   }
 
   try {
-    const startTime = Date.now();
-
-    const result = await SearchService.searchGroupsByQuery(
+    const searchData = await SearchService.searchGroupsByQuery(
       query,
       currentUserId,
       { page: pageNum, limit: limitNum }
     );
 
-    const searchTime = Date.now() - startTime;
-
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          ...result,
-          searchTime,
-          query: query.trim(),
-        },
-        `Found ${result.groups.length} groups`
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          searchData,
+          `Found ${searchData.groups.length} groups`
+        )
+      );
   } catch (error) {
     throw new ApiError(500, `Group search failed: ${error.message}`);
   }
@@ -238,26 +211,20 @@ const searchInstitutions = asyncHandler(async (req, res) => {
   }
 
   try {
-    const startTime = Date.now();
-
-    const result = await SearchService.searchInstitutionsByQuery(query, {
+    const searchData = await SearchService.searchInstitutionsByQuery(query, {
       page: pageNum,
       limit: limitNum,
     });
 
-    const searchTime = Date.now() - startTime;
-
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          ...result,
-          searchTime,
-          query: query.trim(),
-        },
-        `Found ${result.institutions.length} institutions`
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          searchData,
+          `Found ${searchData.institutions.length} institutions`
+        )
+      );
   } catch (error) {
     throw new ApiError(500, `Institution search failed: ${error.message}`);
   }
@@ -282,26 +249,20 @@ const searchDepartments = asyncHandler(async (req, res) => {
   }
 
   try {
-    const startTime = Date.now();
-
-    const result = await SearchService.searchDepartmentsByQuery(query, {
+    const searchData = await SearchService.searchDepartmentsByQuery(query, {
       page: pageNum,
       limit: limitNum,
     });
 
-    const searchTime = Date.now() - startTime;
-
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          ...result,
-          searchTime,
-          query: query.trim(),
-        },
-        `Found ${result.departments.length} departments`
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          searchData,
+          `Found ${searchData.departments.length} departments`
+        )
+      );
   } catch (error) {
     throw new ApiError(500, `Department search failed: ${error.message}`);
   }
@@ -327,27 +288,21 @@ const searchComments = asyncHandler(async (req, res) => {
   }
 
   try {
-    const startTime = Date.now();
-
-    const result = await SearchService.searchCommentsByQuery(
+    const searchData = await SearchService.searchCommentsByQuery(
       query,
       currentUserId,
       { page: pageNum, limit: limitNum }
     );
 
-    const searchTime = Date.now() - startTime;
-
-    return res.status(200).json(
-      new ApiResponse(
-        200,
-        {
-          ...result,
-          searchTime,
-          query: query.trim(),
-        },
-        `Found ${result.comments.length} comments`
-      )
-    );
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          searchData,
+          `Found ${searchData.comments.length} comments`
+        )
+      );
   } catch (error) {
     throw new ApiError(500, `Comment search failed: ${error.message}`);
   }
@@ -362,11 +317,30 @@ const getSearchSuggestions = asyncHandler(async (req, res) => {
   const currentUserId = req.user._id;
 
   if (!query || query.trim().length < 1) {
-    return res.status(200).json(new ApiResponse(200, [], "No query provided"));
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          suggestions: [],
+          pagination: {
+            totalDocs: 0,
+            limit: 5,
+            page: 1,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+          },
+          meta: {
+            query: "",
+          },
+        },
+        "No query provided"
+      )
+    );
   }
 
   try {
-    const suggestions = await SearchService.generateSearchSuggestions(
+    const searchData = await SearchService.generateSearchSuggestions(
       query.trim(),
       currentUserId
     );
@@ -376,8 +350,8 @@ const getSearchSuggestions = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          suggestions,
-          `Generated ${suggestions.length} suggestions`
+          searchData,
+          `Generated ${searchData.suggestions.length} suggestions`
         )
       );
   } catch (error) {

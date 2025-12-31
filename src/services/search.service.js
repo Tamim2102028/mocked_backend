@@ -13,15 +13,6 @@ import {
 } from "../constants/index.js";
 import { GroupMembership } from "../models/groupMembership.model.js";
 
-/**
- * ====================================
- * SEARCH SERVICE
- * ====================================
- *
- * Handles all search operations with optimized queries,
- * privacy controls, and result formatting.
- */
-
 class SearchService {
   /**
    * Perform global search across all content types

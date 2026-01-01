@@ -11,6 +11,7 @@ import {
   REACTION_TARGET_MODELS,
   PROFILE_RELATION_STATUS, // Import Profile Status
   FRIENDSHIP_STATUS, // Import Friendship Status
+  POST_VISIBILITY,
 } from "../constants/index.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
@@ -1372,24 +1373,56 @@ const groupServices = {
     }
 
     // 2. Check Permission (If Private, must be member)
-    if (group.privacy === GROUP_PRIVACY.PRIVATE) {
-      const membership = await GroupMembership.findOne({
+    // Fetch membership first for visibility filtering
+    let userMembership = null;
+    if (userId) {
+      userMembership = await GroupMembership.findOne({
         group: groupId,
         user: userId,
-        status: GROUP_MEMBERSHIP_STATUS.JOINED,
       });
+    }
 
-      if (!membership) {
+    if (group.privacy === GROUP_PRIVACY.PRIVATE) {
+      if (
+        !userMembership ||
+        userMembership.status !== GROUP_MEMBERSHIP_STATUS.JOINED
+      ) {
         throw new ApiError(403, "You must be a member to view posts");
       }
     }
 
-    // 3. Query Posts
+    // 3. Query Posts with visibility filter
+    // Check if current user is a member
+    const isMember =
+      !!userMembership &&
+      userMembership.status === GROUP_MEMBERSHIP_STATUS.JOINED;
+
+    let visibilityFilter;
+    if (isMember) {
+      // Members can see: PUBLIC, CONNECTIONS, and their own ONLY_ME posts
+      visibilityFilter = {
+        $or: [
+          { visibility: POST_VISIBILITY.PUBLIC },
+          { visibility: POST_VISIBILITY.CONNECTIONS },
+          { visibility: POST_VISIBILITY.ONLY_ME, author: userId },
+        ],
+      };
+    } else {
+      // Non-members can only see PUBLIC posts (if group is public)
+      visibilityFilter = {
+        $or: [
+          { visibility: POST_VISIBILITY.PUBLIC },
+          { visibility: POST_VISIBILITY.ONLY_ME, author: userId }, // Their own ONLY_ME if somehow they posted before leaving
+        ],
+      };
+    }
+
     const query = {
       postOnModel: POST_TARGET_MODELS.GROUP,
       postOnId: groupId,
       isDeleted: false,
       isArchived: false,
+      ...visibilityFilter,
     };
 
     const posts = await Post.find(query)
@@ -1403,15 +1436,6 @@ const groupServices = {
     let viewedPostIds = new Set();
     let likedPostIds = new Set();
     const postIds = posts.map((p) => p._id);
-
-    // Fetch membership once to determine admin/owner for current user
-    let userMembership = null;
-    if (userId) {
-      userMembership = await GroupMembership.findOne({
-        group: groupId,
-        user: userId,
-      });
-    }
 
     if (userId && posts.length > 0) {
       const viewedPosts = await ReadPost.find({
@@ -1485,25 +1509,54 @@ const groupServices = {
     }
 
     // 2. Check Permission (If Private, must be member)
-    if (group.privacy === GROUP_PRIVACY.PRIVATE) {
-      const membership = await GroupMembership.findOne({
+    // Fetch membership first for visibility filtering
+    let userMembership = null;
+    if (userId) {
+      userMembership = await GroupMembership.findOne({
         group: groupId,
         user: userId,
-        status: GROUP_MEMBERSHIP_STATUS.JOINED,
       });
+    }
 
-      if (!membership) {
+    if (group.privacy === GROUP_PRIVACY.PRIVATE) {
+      if (
+        !userMembership ||
+        userMembership.status !== GROUP_MEMBERSHIP_STATUS.JOINED
+      ) {
         throw new ApiError(403, "You must be a member to view posts");
       }
     }
 
-    // 3. Query Pinned Posts
+    // 3. Query Pinned Posts with visibility filter
+    const isMember =
+      !!userMembership &&
+      userMembership.status === GROUP_MEMBERSHIP_STATUS.JOINED;
+
+    let visibilityFilter;
+    if (isMember) {
+      visibilityFilter = {
+        $or: [
+          { visibility: POST_VISIBILITY.PUBLIC },
+          { visibility: POST_VISIBILITY.CONNECTIONS },
+          { visibility: POST_VISIBILITY.ONLY_ME, author: userId },
+        ],
+      };
+    } else {
+      visibilityFilter = {
+        $or: [
+          { visibility: POST_VISIBILITY.PUBLIC },
+          { visibility: POST_VISIBILITY.ONLY_ME, author: userId },
+        ],
+      };
+    }
+
     const query = {
       postOnModel: POST_TARGET_MODELS.GROUP,
       postOnId: groupId,
       isDeleted: false,
       isArchived: false,
       isPinned: true,
+      ...visibilityFilter,
     };
 
     const posts = await Post.find(query)
@@ -1517,15 +1570,6 @@ const groupServices = {
     let viewedPostIds = new Set();
     let likedPostIds = new Set();
     const postIds = posts.map((p) => p._id);
-
-    // Fetch membership once to determine admin/owner for current user
-    let userMembership = null;
-    if (userId) {
-      userMembership = await GroupMembership.findOne({
-        group: groupId,
-        user: userId,
-      });
-    }
 
     if (userId && posts.length > 0) {
       const viewedPosts = await ReadPost.find({

@@ -239,7 +239,21 @@ export const deletePostService = async (postId, userId) => {
   }
 
   // Check authorization
-  if (post.author.toString() !== userId.toString()) {
+  const isAuthor = post.author.toString() === userId.toString();
+
+  // For group posts, check if user is owner or admin
+  let isGroupAdminOrOwner = false;
+  if (post.postOnModel === POST_TARGET_MODELS.GROUP) {
+    const membership = await GroupMembership.findOne({
+      group: post.postOnId,
+      user: userId,
+      role: { $in: [GROUP_ROLES.OWNER, GROUP_ROLES.ADMIN] },
+    });
+    isGroupAdminOrOwner = !!membership;
+  }
+
+  // Allow delete if user is author OR (for group posts) if user is admin/owner
+  if (!isAuthor && !isGroupAdminOrOwner) {
     throw new ApiError(403, "You are not authorized to delete this post");
   }
 

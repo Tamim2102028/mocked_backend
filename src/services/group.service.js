@@ -214,6 +214,11 @@ const groupActions = {
       });
 
       if (existing) {
+        // Check if user is banned
+        if (existing.status === GROUP_MEMBERSHIP_STATUS.BANNED) {
+          results.push({ userId: targetId, status: "BANNED" });
+          continue;
+        }
         results.push({ userId: targetId, status: "ALREADY_ASSOCIATED" });
         continue;
       }
@@ -1181,6 +1186,7 @@ const groupServices = {
     const isAdmin = membership?.role === GROUP_ROLES.ADMIN;
     const isOwner = membership?.role === GROUP_ROLES.OWNER;
     const isModerator = membership?.role === GROUP_ROLES.MODERATOR;
+    const isBanned = status === GROUP_MEMBERSHIP_STATUS.BANNED;
 
     const isRestricted =
       !isMember &&
@@ -1196,6 +1202,7 @@ const groupServices = {
       isOwner,
       isModerator,
       isMember,
+      isBanned,
       isRestricted,
     };
 

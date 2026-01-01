@@ -527,6 +527,230 @@ const groupActions = {
     return { role: GROUP_ROLES.MEMBER };
   },
 
+  // ==========================================
+  // PROMOTE MEMBER TO MODERATOR (Owner Only)
+  // ==========================================
+  promoteToModeratorService: async (groupId, memberId, ownerId) => {
+    // 1. Verify Owner
+    const ownerMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: ownerId,
+      role: GROUP_ROLES.OWNER,
+    });
+    if (!ownerMembership)
+      throw new ApiError(403, "Only owner can promote members");
+
+    // 2. Find target member
+    const targetMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: memberId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!targetMembership) throw new ApiError(404, "Member not found");
+
+    // 3. Verify target is a MEMBER
+    if (targetMembership.role !== GROUP_ROLES.MEMBER) {
+      throw new ApiError(400, "Can only promote members to moderator");
+    }
+
+    // 4. Update Role
+    targetMembership.role = GROUP_ROLES.MODERATOR;
+    await targetMembership.save();
+
+    return { role: GROUP_ROLES.MODERATOR };
+  },
+
+  // ==========================================
+  // PROMOTE MODERATOR TO ADMIN (Owner Only)
+  // ==========================================
+  promoteToAdminService: async (groupId, memberId, ownerId) => {
+    // 1. Verify Owner
+    const ownerMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: ownerId,
+      role: GROUP_ROLES.OWNER,
+    });
+    if (!ownerMembership)
+      throw new ApiError(403, "Only owner can promote to admin");
+
+    // 2. Find target member
+    const targetMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: memberId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!targetMembership) throw new ApiError(404, "Member not found");
+
+    // 3. Verify target is a MODERATOR
+    if (targetMembership.role !== GROUP_ROLES.MODERATOR) {
+      throw new ApiError(400, "Can only promote moderators to admin");
+    }
+
+    // 4. Update Role
+    targetMembership.role = GROUP_ROLES.ADMIN;
+    await targetMembership.save();
+
+    return { role: GROUP_ROLES.ADMIN };
+  },
+
+  // ==========================================
+  // DEMOTE ADMIN TO MODERATOR (Owner Only)
+  // ==========================================
+  demoteToModeratorService: async (groupId, memberId, ownerId) => {
+    // 1. Verify Owner
+    const ownerMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: ownerId,
+      role: GROUP_ROLES.OWNER,
+    });
+    if (!ownerMembership)
+      throw new ApiError(403, "Only owner can demote admins");
+
+    // 2. Find target member
+    const targetMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: memberId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!targetMembership) throw new ApiError(404, "Member not found");
+
+    // 3. Verify target is an ADMIN
+    if (targetMembership.role !== GROUP_ROLES.ADMIN) {
+      throw new ApiError(400, "Can only demote admins to moderator");
+    }
+
+    // 4. Update Role
+    targetMembership.role = GROUP_ROLES.MODERATOR;
+    await targetMembership.save();
+
+    return { role: GROUP_ROLES.MODERATOR };
+  },
+
+  // ==========================================
+  // DEMOTE MODERATOR TO MEMBER (Owner Only)
+  // ==========================================
+  demoteToMemberService: async (groupId, memberId, ownerId) => {
+    // 1. Verify Owner
+    const ownerMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: ownerId,
+      role: GROUP_ROLES.OWNER,
+    });
+    if (!ownerMembership)
+      throw new ApiError(403, "Only owner can demote moderators");
+
+    // 2. Find target member
+    const targetMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: memberId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!targetMembership) throw new ApiError(404, "Member not found");
+
+    // 3. Verify target is a MODERATOR
+    if (targetMembership.role !== GROUP_ROLES.MODERATOR) {
+      throw new ApiError(400, "Can only demote moderators to member");
+    }
+
+    // 4. Update Role
+    targetMembership.role = GROUP_ROLES.MEMBER;
+    await targetMembership.save();
+
+    return { role: GROUP_ROLES.MEMBER };
+  },
+
+  // ==========================================
+  // TRANSFER OWNERSHIP (Owner Only, to Admin)
+  // ==========================================
+  transferOwnershipService: async (groupId, newOwnerId, currentOwnerId) => {
+    // 1. Verify current owner
+    const currentOwnerMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: currentOwnerId,
+      role: GROUP_ROLES.OWNER,
+    });
+    if (!currentOwnerMembership)
+      throw new ApiError(403, "Only owner can transfer ownership");
+
+    // 2. Find new owner (must be ADMIN)
+    const newOwnerMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: newOwnerId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!newOwnerMembership) throw new ApiError(404, "Member not found");
+
+    // 3. Verify new owner is an ADMIN
+    if (newOwnerMembership.role !== GROUP_ROLES.ADMIN) {
+      throw new ApiError(400, "Can only transfer ownership to an admin");
+    }
+
+    // 4. Update roles
+    currentOwnerMembership.role = GROUP_ROLES.ADMIN;
+    newOwnerMembership.role = GROUP_ROLES.OWNER;
+
+    await currentOwnerMembership.save();
+    await newOwnerMembership.save();
+
+    return {
+      previousOwnerRole: GROUP_ROLES.ADMIN,
+      newOwnerRole: GROUP_ROLES.OWNER,
+    };
+  },
+
+  // ==========================================
+  // BAN MEMBER (Owner/Admin/Moderator can ban lower roles)
+  // ==========================================
+  banMemberService: async (groupId, targetUserId, actorId) => {
+    // Role hierarchy: OWNER > ADMIN > MODERATOR > MEMBER
+    const roleHierarchy = {
+      [GROUP_ROLES.OWNER]: 4,
+      [GROUP_ROLES.ADMIN]: 3,
+      [GROUP_ROLES.MODERATOR]: 2,
+      [GROUP_ROLES.MEMBER]: 1,
+    };
+
+    // 1. Get actor's membership
+    const actorMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: actorId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!actorMembership) throw new ApiError(403, "You are not a member");
+
+    // 2. Check actor has permission (at least MODERATOR)
+    if (
+      roleHierarchy[actorMembership.role] < roleHierarchy[GROUP_ROLES.MODERATOR]
+    ) {
+      throw new ApiError(403, "You don't have permission to ban members");
+    }
+
+    // 3. Get target's membership
+    const targetMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: targetUserId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+    if (!targetMembership) throw new ApiError(404, "Member not found");
+
+    // 4. Check actor's role is higher than target's role
+    if (
+      roleHierarchy[actorMembership.role] <=
+      roleHierarchy[targetMembership.role]
+    ) {
+      throw new ApiError(403, "Cannot ban someone with same or higher role");
+    }
+
+    // 5. Ban the member (change status to BANNED)
+    targetMembership.status = GROUP_MEMBERSHIP_STATUS.BANNED;
+    await targetMembership.save();
+
+    // 6. Decrement member count
+    await Group.findByIdAndUpdate(groupId, { $inc: { membersCount: -1 } });
+
+    return { memberId: targetMembership._id };
+  },
+
   createGroupPostService: async (groupId, userId, postData) => {
     // 1. Find Group
     const group = await Group.findById(groupId);
@@ -997,19 +1221,26 @@ const groupServices = {
       throw new ApiError(404, "This group has been deleted");
     }
 
-    // Fetch members
+    // Get current user's membership for role info
+    const currentUserMembership = await GroupMembership.findOne({
+      group: groupId,
+      user: currentUserId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+
+    // Fetch members with proper nested populate
     const membersData = await GroupMembership.find({
       group: groupId,
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
     })
-      .populate(
-        "user",
-        "fullName userName avatar academicInfo userType institution"
-      )
-      .populate([
-        { path: "user.institution", select: "name" },
-        { path: "user.academicInfo.department", select: "name" },
-      ])
+      .populate({
+        path: "user",
+        select: "fullName userName avatar academicInfo userType institution",
+        populate: [
+          { path: "institution", select: "name" },
+          { path: "academicInfo.department", select: "name" },
+        ],
+      })
       .sort({ role: 1, createdAt: 1 }) // Owner -> Admin -> Member
       .skip(skip)
       .limit(Number(limit));
@@ -1019,13 +1250,10 @@ const groupServices = {
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
     });
 
-    // Populate deeply for institution/department manually if populate above fails (Mongoose deep populate syntax varies)
-    // Actually standard populate in 'user' projection + populate options is better but let's assume 'user' is populated.
-    // We need to fetch Friendships for these members relative to currentUserId
-
+    // Get all member user IDs for friendship lookup
     const memberUserIds = membersData.map((m) => m.user._id);
 
-    // Find Friendships where (requester=ME and recipient=MEMBER) OR (requester=MEMBER and recipient=ME)
+    // Find all friendships between current user and members
     const friendships = await Friendship.find({
       $or: [
         { requester: currentUserId, recipient: { $in: memberUserIds } },
@@ -1033,52 +1261,68 @@ const groupServices = {
       ],
     });
 
-    // Map friendship status by User ID
-    const friendshipMap = {}; // userId -> { status, id }
+    // Build friendship map with detailed status
+    const friendshipMap = {};
     friendships.forEach((f) => {
       const isRequester = f.requester.toString() === currentUserId.toString();
       const otherUserId = isRequester
         ? f.recipient.toString()
         : f.requester.toString();
 
-      let status = null;
-      if (f.status === FRIENDSHIP_STATUS.ACCEPTED) {
-        status = PROFILE_RELATION_STATUS.FRIEND;
-      } else if (f.status === FRIENDSHIP_STATUS.PENDING) {
-        status = isRequester
-          ? PROFILE_RELATION_STATUS.REQUEST_SENT
-          : PROFILE_RELATION_STATUS.REQUEST_RECEIVED;
-      } else if (f.status === FRIENDSHIP_STATUS.BLOCKED) {
-        status = PROFILE_RELATION_STATUS.BLOCKED;
-      }
-
-      friendshipMap[otherUserId] = { status, id: f._id };
+      friendshipMap[otherUserId] = {
+        friendshipId: f._id,
+        isFriend: f.status === FRIENDSHIP_STATUS.ACCEPTED,
+        isSentRequest: f.status === FRIENDSHIP_STATUS.PENDING && isRequester,
+        hasPendingRequest:
+          f.status === FRIENDSHIP_STATUS.PENDING && !isRequester,
+        isBlockedByMe: f.status === FRIENDSHIP_STATUS.BLOCKED && isRequester,
+        isBlockedByThem: f.status === FRIENDSHIP_STATUS.BLOCKED && !isRequester,
+      };
     });
 
-    // Format response using mapUserToResponse
+    // Format members response
     const members = membersData
       .map((m) => {
-        // Map user
-        const mapped = mapUserToResponse(m.user);
-        if (!mapped) return null;
+        if (!m.user) return null;
 
-        // Add Friendship Info
-        const fsInfo = friendshipMap[m.user._id.toString()];
-        if (fsInfo) {
-          mapped.meta.friendshipStatus = fsInfo.status;
-          mapped.meta.friendshipId = fsInfo.id;
-        }
+        const userId = m.user._id.toString();
+        const isSelf = userId === currentUserId.toString();
+        const fsInfo = friendshipMap[userId] || {};
 
-        // Add Group Role & Membership Info
-        mapped.meta.role = m.role;
-        mapped.meta.joinedAt = m.joinedAt || m.createdAt;
-        mapped.meta.memberId = m._id; // Membership ID
-
-        if (m.user._id.toString() === currentUserId.toString()) {
-          mapped.meta.friendshipStatus = PROFILE_RELATION_STATUS.SELF;
-        }
-
-        return mapped;
+        return {
+          user: {
+            _id: m.user._id,
+            userName: m.user.userName,
+            fullName: m.user.fullName,
+            avatar: m.user.avatar,
+            userType: m.user.userType,
+            institution: m.user.institution
+              ? { _id: m.user.institution._id, name: m.user.institution.name }
+              : null,
+            department: m.user.academicInfo?.department
+              ? {
+                  _id: m.user.academicInfo.department._id,
+                  name: m.user.academicInfo.department.name,
+                }
+              : null,
+          },
+          meta: {
+            // Group role info
+            role: m.role,
+            memberId: m._id,
+            joinedAt: m.joinedAt || m.createdAt,
+            // Friendship info
+            friendshipId: fsInfo.friendshipId || null,
+            isFriend: isSelf ? false : fsInfo.isFriend || false,
+            isSentRequest: isSelf ? false : fsInfo.isSentRequest || false,
+            hasPendingRequest: isSelf
+              ? false
+              : fsInfo.hasPendingRequest || false,
+            isBlockedByMe: isSelf ? false : fsInfo.isBlockedByMe || false,
+            isBlockedByThem: isSelf ? false : fsInfo.isBlockedByThem || false,
+            isSelf,
+          },
+        };
       })
       .filter(Boolean);
 
@@ -1087,7 +1331,12 @@ const groupServices = {
     const hasPrevPage = page > 1;
 
     return {
-      members,
+      data: {
+        members,
+      },
+      meta: {
+        currentUserRole: currentUserMembership?.role || null,
+      },
       pagination: {
         totalDocs,
         limit: Number(limit),

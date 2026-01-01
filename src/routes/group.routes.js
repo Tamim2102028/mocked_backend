@@ -21,6 +21,12 @@ import {
   removeMember,
   assignAdmin,
   revokeAdmin,
+  promoteToModerator,
+  promoteToAdmin,
+  demoteToModerator,
+  demoteToMember,
+  transferOwnership,
+  banMember,
   getGroupPinnedPosts,
 } from "../controllers/group.controllers.js";
 import { uploadImage } from "../middlewares/multer.middleware.js";
@@ -66,5 +72,11 @@ router.post("/:slug/invite", inviteMembers);
 router.delete("/:slug/members/:userId", removeMember);
 router.patch("/:slug/members/:userId/assign-admin", assignAdmin);
 router.patch("/:slug/members/:userId/revoke-admin", revokeAdmin);
+router.patch("/:slug/members/:userId/promote-moderator", promoteToModerator);
+router.patch("/:slug/members/:userId/promote-admin", promoteToAdmin);
+router.patch("/:slug/members/:userId/demote-moderator", demoteToModerator);
+router.patch("/:slug/members/:userId/demote-member", demoteToMember);
+router.patch("/:slug/members/:userId/transfer-ownership", transferOwnership);
+router.patch("/:slug/members/:userId/ban", banMember);
 
 export default router;

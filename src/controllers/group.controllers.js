@@ -344,7 +344,7 @@ const getGroupMembers = asyncHandler(async (req, res) => {
   const group = await Group.findOne({ slug });
   if (!group) throw new ApiError(404, "Group not found");
 
-  const { members, pagination } = await groupServices.getGroupMembersService(
+  const { data, meta, pagination } = await groupServices.getGroupMembersService(
     group._id,
     req.user._id,
     page,
@@ -356,7 +356,7 @@ const getGroupMembers = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { members, pagination },
+        { ...data, meta, pagination },
         "Group members fetched successfully"
       )
     );
@@ -468,6 +468,126 @@ const getGroupPinnedPosts = asyncHandler(async (req, res) => {
     );
 });
 
+// ==========================================
+// 🚀 PROMOTE TO MODERATOR (Owner Only)
+// ==========================================
+const promoteToModerator = asyncHandler(async (req, res) => {
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { role } = await groupActions.promoteToModeratorService(
+    group._id,
+    userId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { role }, "Member promoted to moderator"));
+});
+
+// ==========================================
+// 🚀 PROMOTE TO ADMIN (Owner Only)
+// ==========================================
+const promoteToAdmin = asyncHandler(async (req, res) => {
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { role } = await groupActions.promoteToAdminService(
+    group._id,
+    userId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { role }, "Moderator promoted to admin"));
+});
+
+// ==========================================
+// 🚀 DEMOTE TO MODERATOR (Owner Only)
+// ==========================================
+const demoteToModerator = asyncHandler(async (req, res) => {
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { role } = await groupActions.demoteToModeratorService(
+    group._id,
+    userId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { role }, "Admin demoted to moderator"));
+});
+
+// ==========================================
+// 🚀 DEMOTE TO MEMBER (Owner Only)
+// ==========================================
+const demoteToMember = asyncHandler(async (req, res) => {
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { role } = await groupActions.demoteToMemberService(
+    group._id,
+    userId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { role }, "Moderator demoted to member"));
+});
+
+// ==========================================
+// 🚀 TRANSFER OWNERSHIP (Owner Only)
+// ==========================================
+const transferOwnership = asyncHandler(async (req, res) => {
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const result = await groupActions.transferOwnershipService(
+    group._id,
+    userId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Ownership transferred successfully"));
+});
+
+// ==========================================
+// 🚀 BAN MEMBER
+// ==========================================
+const banMember = asyncHandler(async (req, res) => {
+  const { slug, userId } = req.params;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { memberId } = await groupActions.banMemberService(
+    group._id,
+    userId,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { memberId }, "Member banned successfully"));
+});
+
 // (Moved to dedicated controllers)
 
 export {
@@ -488,6 +608,12 @@ export {
   removeMember,
   assignAdmin,
   revokeAdmin,
+  promoteToModerator,
+  promoteToAdmin,
+  demoteToModerator,
+  demoteToMember,
+  transferOwnership,
+  banMember,
   getGroupFeed,
   getGroupPinnedPosts,
   deleteGroup,

@@ -13,6 +13,7 @@ import {
   POST_VISIBILITY,
   REACTION_TARGET_MODELS,
   GROUP_ROLES,
+  GROUP_MEMBERSHIP_STATUS,
 } from "../../constants/index.js";
 import { ApiError } from "../../utils/ApiError.js";
 
@@ -336,6 +337,22 @@ export const updatePostService = async (postId, userId, updateData) => {
       410,
       "This post has been deleted and cannot be updated."
     );
+  }
+
+  // For group posts, check if user is still a member
+  if (post.postOnModel === POST_TARGET_MODELS.GROUP) {
+    const membership = await GroupMembership.findOne({
+      group: post.postOnId,
+      user: userId,
+      status: GROUP_MEMBERSHIP_STATUS.JOINED,
+    });
+
+    if (!membership) {
+      throw new ApiError(
+        403,
+        "You must be a member of this group to edit your post"
+      );
+    }
   }
 
   // Update fields

@@ -1428,21 +1428,29 @@ const groupServices = {
       likedPostIds = new Set(likedPosts.map((r) => r.targetId.toString()));
     }
 
-    const postsWithContext = posts.map((post) => ({
-      post,
-      meta: {
-        isLiked: likedPostIds.has(post._id.toString()),
-        isSaved: false,
-        isMine: post.author._id.toString() === (userId || "").toString(),
-        isRead: viewedPostIds.has(post._id.toString()),
-        isAdmin:
-          !!userMembership &&
-          [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role),
-        isOwner: !!userMembership && userMembership.role === GROUP_ROLES.OWNER,
-        isModerator:
-          !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
-      },
-    }));
+    const postsWithContext = posts.map((post) => {
+      const isMine = post.author._id.toString() === (userId || "").toString();
+      const isAdmin =
+        !!userMembership &&
+        [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role);
+      const isOwner =
+        !!userMembership && userMembership.role === GROUP_ROLES.OWNER;
+
+      return {
+        post,
+        meta: {
+          isLiked: likedPostIds.has(post._id.toString()),
+          isSaved: false,
+          isMine,
+          isRead: viewedPostIds.has(post._id.toString()),
+          isAdmin,
+          isOwner,
+          isModerator:
+            !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
+          canDelete: isMine || isAdmin || isOwner,
+        },
+      };
+    });
 
     const totalDocs = await Post.countDocuments(query);
     const totalPages = Math.ceil(totalDocs / limit);
@@ -1534,21 +1542,29 @@ const groupServices = {
       likedPostIds = new Set(likedPosts.map((r) => r.targetId.toString()));
     }
 
-    const postsWithContext = posts.map((post) => ({
-      post,
-      meta: {
-        isLiked: likedPostIds.has(post._id.toString()),
-        isSaved: false,
-        isMine: post.author._id.toString() === userId.toString(),
-        isRead: viewedPostIds.has(post._id.toString()),
-        isAdmin:
-          !!userMembership &&
-          [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role),
-        isOwner: !!userMembership && userMembership.role === GROUP_ROLES.OWNER,
-        isModerator:
-          !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
-      },
-    }));
+    const postsWithContext = posts.map((post) => {
+      const isMine = post.author._id.toString() === userId.toString();
+      const isAdmin =
+        !!userMembership &&
+        [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role);
+      const isOwner =
+        !!userMembership && userMembership.role === GROUP_ROLES.OWNER;
+
+      return {
+        post,
+        meta: {
+          isLiked: likedPostIds.has(post._id.toString()),
+          isSaved: false,
+          isMine,
+          isRead: viewedPostIds.has(post._id.toString()),
+          isAdmin,
+          isOwner,
+          isModerator:
+            !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
+          canDelete: isMine || isAdmin || isOwner,
+        },
+      };
+    });
 
     const totalDocs = await Post.countDocuments(query);
     const totalPages = Math.ceil(totalDocs / limit);

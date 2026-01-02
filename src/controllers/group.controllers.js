@@ -9,14 +9,9 @@ import { Group } from "../models/group.model.js";
 // 🚀 1. CREATE GROUP
 // ==========================================
 const createGroup = asyncHandler(async (req, res) => {
-  const avatarLocalPath = req.files?.avatar?.[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
-
   const { group, meta } = await groupActions.createGroupService(
     req.body,
-    req.user._id,
-    avatarLocalPath,
-    coverImageLocalPath
+    req.user._id
   );
 
   return res

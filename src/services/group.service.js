@@ -24,32 +24,7 @@ import { createPostService } from "./common/post.service.js";
 import { mapUserToResponse } from "../utils/responseMappers.js"; // Import Mapper
 
 const groupActions = {
-  createGroupService: async (
-    groupData,
-    userId,
-    avatarLocalPath,
-    coverImageLocalPath
-  ) => {
-    // Handle Image Uploads
-    let avatar = "";
-    let coverImage = "";
-
-    // Avatar
-    if (avatarLocalPath) {
-      const uploadResult = await uploadFile(avatarLocalPath);
-      if (uploadResult) {
-        avatar = uploadResult.secure_url;
-      }
-    }
-
-    // Cover Image
-    if (coverImageLocalPath) {
-      const uploadResult = await uploadFile(coverImageLocalPath);
-      if (uploadResult) {
-        coverImage = uploadResult.secure_url;
-      }
-    }
-
+  createGroupService: async (groupData, userId) => {
     // Parse settings if it's a string (FormData sends objects as JSON strings)
     let parsedSettings = groupData.settings;
     if (typeof groupData.settings === "string") {
@@ -107,11 +82,9 @@ const groupActions = {
       owner: userId,
       membersCount: 1,
       avatar:
-        avatar ||
         "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=500&auto=format&fit=crop&q=60", // Open Book on White Background
       settings: parsedSettings || {},
       coverImage:
-        coverImage ||
         "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200&auto=format&fit=crop&q=60", // Study Desk/Books
     });
 

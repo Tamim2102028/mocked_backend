@@ -90,7 +90,6 @@ const userSchema = new Schema(
       session: { type: String },
       currentSemester: { type: Number },
       section: { type: String, trim: true },
-      isCr: { type: Boolean, default: false },
       teacherId: { type: String },
       rank: { type: String, enum: Object.values(TEACHER_RANKS) },
       officeHours: [

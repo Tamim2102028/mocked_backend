@@ -271,20 +271,6 @@ export const sendFriendRequestService = async (currentUserId, targetUserId) => {
     status: FRIENDSHIP_STATUS.PENDING,
   });
 
-  const existingFollow = await Follow.findOne({
-    follower: currentUserId,
-    following: targetUserId,
-    followingModel: FOLLOW_TARGET_MODELS.USER,
-  });
-
-  if (!existingFollow) {
-    await Follow.create({
-      follower: currentUserId,
-      following: targetUserId,
-      followingModel: FOLLOW_TARGET_MODELS.USER,
-    });
-  }
-
   return {
     status: FRIENDSHIP_STATUS.PENDING,
     recipientId: targetUserId,

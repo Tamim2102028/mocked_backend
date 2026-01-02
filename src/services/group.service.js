@@ -12,6 +12,7 @@ import {
   PROFILE_RELATION_STATUS, // Import Profile Status
   FRIENDSHIP_STATUS, // Import Friendship Status
   POST_VISIBILITY,
+  POST_TYPES,
 } from "../constants/index.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadFile } from "../utils/cloudinaryFileUpload.js";
@@ -1588,6 +1589,144 @@ const groupServices = {
 
     const postsWithContext = posts.map((post) => {
       const isMine = post.author._id.toString() === userId.toString();
+      const isAdmin =
+        !!userMembership &&
+        [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role);
+      const isOwner =
+        !!userMembership && userMembership.role === GROUP_ROLES.OWNER;
+
+      return {
+        post,
+        meta: {
+          isLiked: likedPostIds.has(post._id.toString()),
+          isSaved: false,
+          isMine,
+          isRead: viewedPostIds.has(post._id.toString()),
+          isAdmin,
+          isOwner,
+          isModerator:
+            !!userMembership && userMembership.role === GROUP_ROLES.MODERATOR,
+          canDelete: isMine || isAdmin || isOwner,
+        },
+      };
+    });
+
+    const totalDocs = await Post.countDocuments(query);
+    const totalPages = Math.ceil(totalDocs / limit);
+
+    return {
+      posts: postsWithContext,
+      pagination: {
+        totalDocs,
+        limit: Number(limit),
+        page: Number(page),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  },
+
+  // Marketplace Posts (BUY_SELL type only)
+  getGroupMarketplacePostsService: async (
+    groupId,
+    userId,
+    page = 1,
+    limit = 10
+  ) => {
+    const skip = (page - 1) * limit;
+
+    // 1. Find Group
+    const group = await Group.findById(groupId).select(
+      "_id privacy settings isDeleted"
+    );
+    if (!group) {
+      throw new ApiError(404, "Group not found");
+    }
+
+    if (group.isDeleted) {
+      throw new ApiError(404, "This group has been deleted");
+    }
+
+    // 2. Fetch membership for visibility filtering
+    let userMembership = null;
+    if (userId) {
+      userMembership = await GroupMembership.findOne({
+        group: groupId,
+        user: userId,
+      });
+    }
+
+    if (group.privacy === GROUP_PRIVACY.PRIVATE) {
+      if (
+        !userMembership ||
+        userMembership.status !== GROUP_MEMBERSHIP_STATUS.JOINED
+      ) {
+        throw new ApiError(403, "You must be a member to view marketplace");
+      }
+    }
+
+    // 3. Query BUY_SELL posts with visibility filter
+    const isMember =
+      !!userMembership &&
+      userMembership.status === GROUP_MEMBERSHIP_STATUS.JOINED;
+
+    let visibilityFilter;
+    if (isMember) {
+      visibilityFilter = {
+        $or: [
+          { visibility: POST_VISIBILITY.PUBLIC },
+          { visibility: POST_VISIBILITY.CONNECTIONS },
+          { visibility: POST_VISIBILITY.ONLY_ME, author: userId },
+        ],
+      };
+    } else {
+      visibilityFilter = {
+        $or: [
+          { visibility: POST_VISIBILITY.PUBLIC },
+          { visibility: POST_VISIBILITY.ONLY_ME, author: userId },
+        ],
+      };
+    }
+
+    const query = {
+      postOnModel: POST_TARGET_MODELS.GROUP,
+      postOnId: groupId,
+      type: POST_TYPES.BUY_SELL,
+      isDeleted: false,
+      isArchived: false,
+      ...visibilityFilter,
+    };
+
+    const posts = await Post.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate("author", "fullName avatar userName")
+      .lean();
+
+    // 4. Add Context
+    let viewedPostIds = new Set();
+    let likedPostIds = new Set();
+    const postIds = posts.map((p) => p._id);
+
+    if (userId && posts.length > 0) {
+      const viewedPosts = await ReadPost.find({
+        user: userId,
+        post: { $in: postIds },
+      }).select("post");
+      viewedPostIds = new Set(viewedPosts.map((vp) => vp.post.toString()));
+
+      const likedPosts = await Reaction.find({
+        user: userId,
+        targetModel: REACTION_TARGET_MODELS.POST,
+        targetId: { $in: postIds },
+      }).select("targetId");
+      likedPostIds = new Set(likedPosts.map((r) => r.targetId.toString()));
+    }
+
+    const postsWithContext = posts.map((post) => {
+      const isMine = post.author._id.toString() === (userId || "").toString();
       const isAdmin =
         !!userMembership &&
         [GROUP_ROLES.ADMIN, GROUP_ROLES.OWNER].includes(userMembership.role);

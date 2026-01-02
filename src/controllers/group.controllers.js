@@ -469,6 +469,35 @@ const getGroupPinnedPosts = asyncHandler(async (req, res) => {
 });
 
 // ==========================================
+// 🚀 GET GROUP MARKETPLACE POSTS (BUY_SELL)
+// ==========================================
+const getGroupMarketplacePosts = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  const group = await Group.findOne({ slug });
+  if (!group) throw new ApiError(404, "Group not found");
+
+  const { posts, pagination } =
+    await groupServices.getGroupMarketplacePostsService(
+      group._id,
+      req.user._id,
+      page,
+      limit
+    );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { posts, pagination },
+        "Group marketplace posts fetched"
+      )
+    );
+});
+
+// ==========================================
 // 🚀 PROMOTE TO MODERATOR (Owner Only)
 // ==========================================
 const promoteToModerator = asyncHandler(async (req, res) => {
@@ -616,6 +645,7 @@ export {
   banMember,
   getGroupFeed,
   getGroupPinnedPosts,
+  getGroupMarketplacePosts,
   deleteGroup,
   inviteMembers,
 };

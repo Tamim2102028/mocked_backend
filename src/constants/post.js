@@ -7,6 +7,7 @@ export const POST_TYPES = {
   QUESTION: "QUESTION",
   ASSIGNMENT: "ASSIGNMENT", // ✅ Added
   VIDEO: "VIDEO", // ✅ Added
+  BUY_SELL: "BUY_SELL", // ✅ Added for marketplace
 };
 
 export const ATTACHMENT_TYPES = {

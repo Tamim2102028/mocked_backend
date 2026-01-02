@@ -28,6 +28,7 @@ import {
   transferOwnership,
   banMember,
   getGroupPinnedPosts,
+  getGroupMarketplacePosts,
 } from "../controllers/group.controllers.js";
 import { uploadImage } from "../middlewares/multer.middleware.js";
 
@@ -62,6 +63,7 @@ router.get("/:slug", getGroupDetails);
 router.get("/:slug/members", getGroupMembers);
 router.get("/:slug/feed", getGroupFeed);
 router.get("/:slug/pinned", getGroupPinnedPosts);
+router.get("/:slug/marketplace", getGroupMarketplacePosts);
 
 // Group Details page Action Routes
 router.delete("/:slug/leave", leaveGroup);

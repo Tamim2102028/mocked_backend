@@ -126,7 +126,7 @@ const groupActions = {
       role: GROUP_ROLES.OWNER,
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
       joinedAt: new Date(),
-      joinedMethod: GROUP_JOIN_METHOD.CREATOR,
+      joinMethod: GROUP_JOIN_METHOD.CREATOR,
     });
 
     const meta = {

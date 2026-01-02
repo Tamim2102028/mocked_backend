@@ -1242,6 +1242,46 @@ const groupServices = {
     return { group, meta };
   },
 
+  // Get unread counts for group tabs (lightweight API)
+  getGroupUnreadCountsService: async (slug, userId) => {
+    const group = await Group.findOne({ slug }).select("_id").lean();
+
+    if (!group) {
+      throw new ApiError(404, "Group not found");
+    }
+
+    // Get all posts user has read
+    const readPostIds = await ReadPost.find({ user: userId })
+      .select("post")
+      .lean()
+      .then((docs) => docs.map((d) => d.post));
+
+    // Count unread pinned posts
+    const unreadPinnedCount = await Post.countDocuments({
+      postOnId: group._id,
+      postOnModel: "Group",
+      isPinned: true,
+      isDeleted: false,
+      _id: { $nin: readPostIds },
+    });
+
+    // Count unread marketplace posts
+    const unreadMarketplaceCount = await Post.countDocuments({
+      postOnId: group._id,
+      postOnModel: "Group",
+      type: POST_TYPES.BUY_SELL,
+      isDeleted: false,
+      _id: { $nin: readPostIds },
+    });
+
+    const meta = {
+      unreadPinnedCount,
+      unreadMarketplaceCount,
+    };
+
+    return { group: { _id: group._id }, meta };
+  },
+
   getGroupMembersService: async (
     groupId,
     currentUserId,

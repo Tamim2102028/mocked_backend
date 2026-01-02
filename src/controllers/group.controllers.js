@@ -335,6 +335,27 @@ const getGroupDetails = asyncHandler(async (req, res) => {
 });
 
 // ==========================================
+// 🚀 13.1 GET GROUP UNREAD COUNTS
+// ==========================================
+const getGroupUnreadCounts = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { group, meta } = await groupServices.getGroupUnreadCountsService(
+    slug,
+    req.user._id
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { group, meta },
+        "Unread counts fetched successfully"
+      )
+    );
+});
+
+// ==========================================
 // 🚀 14. GET GROUP MEMBERS
 // ==========================================
 const getGroupMembers = asyncHandler(async (req, res) => {
@@ -633,6 +654,7 @@ export {
   acceptJoinRequest,
   rejectJoinRequest,
   getGroupDetails,
+  getGroupUnreadCounts,
   getGroupMembers,
   removeMember,
   assignAdmin,

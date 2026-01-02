@@ -17,6 +17,7 @@ import {
   acceptJoinRequest,
   rejectJoinRequest,
   getGroupDetails,
+  getGroupUnreadCounts,
   getGroupMembers,
   removeMember,
   assignAdmin,
@@ -59,11 +60,12 @@ router.post("/:slug/accept", acceptJoinRequest);
 router.post("/:slug/reject", rejectJoinRequest);
 
 // Group Details page Routes
-router.get("/:slug", getGroupDetails);
+router.get("/:slug/unread-counts", getGroupUnreadCounts);
 router.get("/:slug/members", getGroupMembers);
 router.get("/:slug/feed", getGroupFeed);
 router.get("/:slug/pinned", getGroupPinnedPosts);
 router.get("/:slug/marketplace", getGroupMarketplacePosts);
+router.get("/:slug", getGroupDetails);
 
 // Group Details page Action Routes
 router.delete("/:slug/leave", leaveGroup);

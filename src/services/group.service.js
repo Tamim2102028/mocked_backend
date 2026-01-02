@@ -1075,23 +1075,39 @@ const groupServices = {
     const memberships = await GroupMembership.find({
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.PENDING,
+      isDeleted: { $ne: true },
     })
       .sort({ createdAt: -1, _id: 1 })
       .select("group")
       .skip(skip)
       .limit(Number(limit))
-      .populate("group");
+      .populate({
+        path: "group",
+        match: { isDeleted: { $ne: true } },
+      });
 
-    const totalDocs = await GroupMembership.countDocuments({
+    // Filter out memberships where group is null (deleted groups)
+    const validMemberships = memberships.filter((m) => m.group !== null);
+
+    const allMemberships = await GroupMembership.find({
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.PENDING,
-    });
+      isDeleted: { $ne: true },
+    })
+      .select("group")
+      .populate({
+        path: "group",
+        match: { isDeleted: { $ne: true } },
+        select: "_id",
+      });
+
+    const totalDocs = allMemberships.filter((m) => m.group !== null).length;
 
     const totalPages = Math.ceil(totalDocs / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
-    const groups = memberships.map((m) => {
+    const groups = validMemberships.map((m) => {
       const groupObj = m.group.toObject ? m.group.toObject() : m.group;
 
       return {
@@ -1127,19 +1143,33 @@ const groupServices = {
       .select("group")
       .skip(skip)
       .limit(Number(limit))
-      .populate("group");
+      .populate({
+        path: "group",
+        match: { isDeleted: { $ne: true } },
+      });
 
-    const totalDocs = await GroupMembership.countDocuments({
+    // Filter out memberships where group is null (deleted groups)
+    const validMemberships = memberships.filter((m) => m.group !== null);
+
+    const allMemberships = await GroupMembership.find({
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.INVITED,
       isDeleted: { $ne: true },
-    });
+    })
+      .select("group")
+      .populate({
+        path: "group",
+        match: { isDeleted: { $ne: true } },
+        select: "_id",
+      });
+
+    const totalDocs = allMemberships.filter((m) => m.group !== null).length;
 
     const totalPages = Math.ceil(totalDocs / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
-    const groups = memberships.map((m) => {
+    const groups = validMemberships.map((m) => {
       const groupObj = m.group.toObject ? m.group.toObject() : m.group;
 
       return {

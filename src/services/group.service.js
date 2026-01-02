@@ -806,6 +806,7 @@ const groupServices = {
     const skip = (page - 1) * limit;
 
     // Find groups where the user is a member (JOINED) AND membership is NOT deleted
+    // Note: When a group is deleted, all its memberships are also soft deleted
     const memberships = await GroupMembership.find({
       user: userId,
       status: GROUP_MEMBERSHIP_STATUS.JOINED,
@@ -1250,7 +1251,7 @@ const groupServices = {
           { path: "academicInfo.department", select: "name" },
         ],
       })
-      .sort({ role: 1, createdAt: 1 }) // Owner -> Admin -> Member
+      .sort({ joinedAt: -1 }) // Newest members first (by join date)
       .skip(skip)
       .limit(Number(limit));
 

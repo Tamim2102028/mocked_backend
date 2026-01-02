@@ -25,7 +25,7 @@ import { mapUserToResponse } from "../utils/responseMappers.js"; // Import Mappe
 
 const groupActions = {
   createGroupService: async (groupData, userId) => {
-    // Parse settings if it's a string (FormData sends objects as JSON strings)
+    // Handle settings (could be JSON string from FormData or Object from JSON request)
     let parsedSettings = groupData.settings;
     if (typeof groupData.settings === "string") {
       try {
@@ -36,6 +36,12 @@ const groupActions = {
           requirePostApproval: false,
         };
       }
+    } else if (!parsedSettings) {
+      // Default settings if missing
+      parsedSettings = {
+        allowMemberPosting: true,
+        requirePostApproval: false,
+      };
     }
 
     // Generate unique slug

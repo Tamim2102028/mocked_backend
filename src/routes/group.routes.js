@@ -37,14 +37,7 @@ const router = Router();
 router.use(verifyJWT);
 
 // Group Page Routes
-router.post(
-  "/",
-  uploadImage.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "coverImage", maxCount: 1 },
-  ]),
-  createGroup
-);
+router.post("/", createGroup);
 
 router.get("/myGroups", getMyGroups);
 router.get("/universityGroups", getUniversityGroups);

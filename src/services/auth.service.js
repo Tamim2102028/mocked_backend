@@ -40,8 +40,9 @@ const generateAccessAndRefreshTokens = async (userId) => {
 // ==========================================
 // 🚀 1. REGISTER USER SERVICE
 // ==========================================
-export const registerUserService = async (userData, files) => {
-  const { fullName, email, password, userName, userType } = userData;
+export const registerUserService = async (userData) => {
+  const { fullName, email, password, userName, userType, agreeToTerms } =
+    userData;
 
   const existedUser = await User.findOne({ $or: [{ email }, { userName }] });
   if (existedUser) {
@@ -55,19 +56,6 @@ export const registerUserService = async (userData, files) => {
   // 3. Check for institution using email domain
   const institution = await findInstitutionByEmailDomain(email);
 
-  // 4. File Upload Logic
-  const avatarLocalPath = files?.avatar?.[0]?.path;
-  const coverImageLocalPath = files?.coverImage?.[0]?.path;
-  let avatar, coverImage;
-  if (avatarLocalPath) {
-    avatar = await uploadFile(avatarLocalPath);
-    if (!avatar) throw new ApiError(500, "Failed to upload avatar");
-  }
-  if (coverImageLocalPath) {
-    coverImage = await uploadFile(coverImageLocalPath);
-    if (!coverImage) throw new ApiError(500, "Failed to upload cover image");
-  }
-
   // 5. Create User Payload with conditional institution linking
   const userPayload = {
     fullName,
@@ -75,14 +63,14 @@ export const registerUserService = async (userData, files) => {
     password,
     userName,
     userType,
+    agreedToTerms: agreeToTerms, // Backend এ সেভ করছি
+    termsAgreedAt: new Date(), // রাজি হওয়ার সঠিক সময় টি সেভ করে রাখছি
     // Default values
     isStudentEmail: false,
   };
 
-  if (avatar?.url) userPayload.avatar = avatar.url;
-  if (coverImage?.url) userPayload.coverImage = coverImage.url;
-
   // If an institution was found, link it to the user
+
   if (institution) {
     userPayload.isStudentEmail = true;
     userPayload.institution = institution._id;

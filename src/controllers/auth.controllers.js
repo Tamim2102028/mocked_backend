@@ -13,8 +13,7 @@ import {
 // -----------------------------
 const registerUser = asyncHandler(async (req, res) => {
   const { user, accessToken, refreshToken } = await registerUserService(
-    req.body,
-    req.files
+    req.body
   );
 
   const options = {

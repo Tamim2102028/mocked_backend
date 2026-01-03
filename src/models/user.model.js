@@ -146,6 +146,15 @@ const userSchema = new Schema(
       default: false,
       index: true,
     },
+    // --- Legal Consent ---
+    agreedToTerms: {
+      type: Boolean,
+      required: true,
+    },
+    termsAgreedAt: {
+      type: Date,
+      default: Date.now,
+    },
     refreshToken: { type: String },
   },
   { timestamps: true }

@@ -24,16 +24,8 @@ const router = Router();
 // 🔓 PUBLIC ROUTES (No Login Required)
 // ==================================================
 
-// Registration Route (With File Upload & Validation)
-router.post(
-  "/register",
-  uploadImage.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "coverImage", maxCount: 1 },
-  ]),
-  validate(userRegisterSchema),
-  registerUser
-);
+// Registration Route (With Validation)
+router.post("/register", validate(userRegisterSchema), registerUser);
 
 // Login Route
 router.post("/login", loginUser);

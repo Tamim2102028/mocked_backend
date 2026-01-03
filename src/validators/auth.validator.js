@@ -44,6 +44,11 @@ const userRegisterSchema = Joi.object({
       "any.only":
         "Security Alert: You can only register as STUDENT or TEACHER.",
     }),
+  // ✅ Real World Safety: Backend এও Terms Agreement চেক করা
+  agreeToTerms: Joi.boolean().valid(true).required().messages({
+    "any.only": "You must agree to the terms and conditions.",
+    "any.required": "Agreement to terms is required.",
+  }),
 });
 
 // ... userOnboardingSchema যা ছিল তাই থাকবে ...
